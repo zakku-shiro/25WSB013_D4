@@ -1,8 +1,9 @@
-#define MOTOR_1_SPEED 0x06  // ANALOGUE,  0-255,    Left Motor Speed Control
-#define MOTOR_1_DIRECTION \
-  0x08                      // DIGITAL,   LOW/HIGH, Left Motor Direction Control
-#define MOTOR_2_SPEED 0x05  // ANALOGUE,  0-255,    Right Motor Speed Control
-#define MOTOR_2_DIRECTION \
+#define PIN_MOTOR_1_SPEED 0x06  // ANALOGUE,  0-255,    Left Motor Speed Control
+#define PIN_MOTOR_1_DIRECTION \
+  0x08  // DIGITAL,   LOW/HIGH, Left Motor Direction Control
+#define PIN_MOTOR_2_SPEED \
+  0x05  // ANALOGUE,  0-255,    Right Motor Speed Control
+#define PIN_MOTOR_2_DIRECTION \
   0x07  // DIGITAL, LOW/HIGH, Right Motor Direction Control
 #define MOTOR_FORWARD LOW
 #define MOTOR_REVERSE HIGH
@@ -18,13 +19,13 @@
 void setLeftMotorSpeed(uint8_t motor_speed) {
   Serial.print("Set Left Motor Speed: ");
   Serial.println(motor_speed);
-  analogWrite(MOTOR_1_SPEED, motor_speed);
+  analogWrite(PIN_MOTOR_1_SPEED, motor_speed);
 }
 
 void setRightMotorSpeed(uint8_t motor_speed) {
   Serial.print("Set Right Motor Speed: ");
   Serial.println(motor_speed);
-  analogWrite(MOTOR_2_SPEED, motor_speed);
+  analogWrite(PIN_MOTOR_2_SPEED, motor_speed);
 }
 
 void setMotorSpeed(uint8_t motor_speed) {
@@ -35,8 +36,8 @@ void setMotorSpeed(uint8_t motor_speed) {
 void moveForward() {
   Serial.println("Change Direction: Forward");
   // Set both motors forward
-  digitalWrite(MOTOR_1_DIRECTION, MOTOR_FORWARD);
-  digitalWrite(MOTOR_2_DIRECTION, MOTOR_FORWARD);
+  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_FORWARD);
+  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_FORWARD);
 }
 
 void moveForward(size_t delay_ms) {
@@ -47,8 +48,8 @@ void moveForward(size_t delay_ms) {
 void moveReverse() {
   Serial.println("Change Direction: Reverse");
   // Set both motors in reverse
-  digitalWrite(MOTOR_1_DIRECTION, MOTOR_REVERSE);
-  digitalWrite(MOTOR_2_DIRECTION, MOTOR_REVERSE);
+  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_REVERSE);
+  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_REVERSE);
 }
 
 void moveReverse(size_t delay_ms) {
@@ -59,8 +60,8 @@ void moveReverse(size_t delay_ms) {
 void turnLeft() {
   Serial.println("Change Direction: Left");
   // Set motor directions
-  digitalWrite(MOTOR_1_DIRECTION, MOTOR_REVERSE);
-  digitalWrite(MOTOR_2_DIRECTION, MOTOR_FORWARD);
+  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_REVERSE);
+  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_FORWARD);
 }
 
 void turnLeft(size_t delay_ms) {
@@ -71,8 +72,8 @@ void turnLeft(size_t delay_ms) {
 void turnRight() {
   Serial.println("Change Direction: Right");
   // Set motor directions
-  digitalWrite(MOTOR_1_DIRECTION, MOTOR_FORWARD);
-  digitalWrite(MOTOR_2_DIRECTION, MOTOR_REVERSE);
+  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_FORWARD);
+  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_REVERSE);
 }
 
 void turnRight(size_t delay_ms) {
@@ -82,8 +83,8 @@ void turnRight(size_t delay_ms) {
 
 void stopMotors() {
   Serial.println("Stopped!");
-  analogWrite(MOTOR_1_SPEED, MOTOR_OFF_SPEED);
-  analogWrite(MOTOR_2_SPEED, MOTOR_OFF_SPEED);
+  analogWrite(PIN_MOTOR_1_SPEED, MOTOR_OFF_SPEED);
+  analogWrite(PIN_MOTOR_2_SPEED, MOTOR_OFF_SPEED);
 }
 
 void setup() {
