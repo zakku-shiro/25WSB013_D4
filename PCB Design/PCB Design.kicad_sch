@@ -434,7 +434,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Switch:SW_DPST_x2"
+		(symbol "Switch:SW_DPDT_x2"
 			(pin_names
 				(offset 0)
 				(hide yes)
@@ -443,15 +443,15 @@
 			(in_bom yes)
 			(on_board yes)
 			(property "Reference" "SW"
-				(at 0 3.175 0)
+				(at 0 5.08 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" "SW_DPST_x2"
-				(at 0 -2.54 0)
+			(property "Value" "SW_DPDT_x2"
+				(at 0 -5.08 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -476,7 +476,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Single Pole Single Throw (SPST) switch, separate symbol"
+			(property "Description" "Switch, dual pole double throw, separate symbols"
 				(at 0 0 0)
 				(effects
 					(font
@@ -485,7 +485,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_keywords" "switch lever"
+			(property "ki_keywords" "switch dual-pole double-throw DPDT spdt ON-ON"
 				(at 0 0 0)
 				(effects
 					(font
@@ -494,7 +494,16 @@
 					(hide yes)
 				)
 			)
-			(symbol "SW_DPST_x2_0_0"
+			(property "ki_fp_filters" "SW*DPDT*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "SW_DPDT_x2_0_0"
 				(circle
 					(center -2.032 0)
 					(radius 0.508)
@@ -506,20 +515,8 @@
 						(type none)
 					)
 				)
-				(polyline
-					(pts
-						(xy -1.524 0.254) (xy 1.524 1.778)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
 				(circle
-					(center 2.032 0)
+					(center 2.032 -2.54)
 					(radius 0.508)
 					(stroke
 						(width 0)
@@ -530,9 +527,63 @@
 					)
 				)
 			)
-			(symbol "SW_DPST_x2_1_1"
+			(symbol "SW_DPDT_x2_0_1"
+				(rectangle
+					(start -3.175 3.81)
+					(end 3.175 -3.81)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.524 0.254) (xy 1.5748 2.286)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 2.032 2.54)
+					(radius 0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "SW_DPDT_x2_1_1"
 				(pin passive line
 					(at -5.08 0 0)
+					(length 2.54)
+					(name "B"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 2.54 180)
 					(length 2.54)
 					(name "A"
 						(effects
@@ -550,29 +601,9 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 0 180)
+					(at 5.08 -2.54 180)
 					(length 2.54)
-					(name "B"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(symbol "SW_DPST_x2_2_1"
-				(pin passive line
-					(at -5.08 0 0)
-					(length 2.54)
-					(name "A"
+					(name "C"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -587,8 +618,10 @@
 						)
 					)
 				)
+			)
+			(symbol "SW_DPDT_x2_2_1"
 				(pin passive line
-					(at 5.08 0 180)
+					(at -5.08 0 0)
 					(length 2.54)
 					(name "B"
 						(effects
@@ -597,7 +630,43 @@
 							)
 						)
 					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 2.54 180)
+					(length 2.54)
+					(name "A"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
 					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -2.54 180)
+					(length 2.54)
+					(name "C"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -891,6 +960,16 @@
 	)
 	(wire
 		(pts
+			(xy 154.94 86.36) (xy 170.18 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "36006580-7047-42a6-982b-8358311b05bf")
+	)
+	(wire
+		(pts
 			(xy 165.1 88.9) (xy 165.1 92.71)
 		)
 		(stroke
@@ -941,6 +1020,16 @@
 	)
 	(wire
 		(pts
+			(xy 154.94 92.71) (xy 154.94 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "66a132b3-b9da-47d5-a29e-c9322638cb8b")
+	)
+	(wire
+		(pts
 			(xy 170.18 109.22) (xy 165.1 109.22)
 		)
 		(stroke
@@ -948,6 +1037,26 @@
 			(type default)
 		)
 		(uuid "677e222d-c8d4-4ce3-8cb7-b0a23a7040b0")
+	)
+	(wire
+		(pts
+			(xy 167.64 91.44) (xy 170.18 91.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "68d7d41e-49fd-4890-96ed-65a4dc3bd06b")
+	)
+	(wire
+		(pts
+			(xy 167.64 92.71) (xy 167.64 91.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6de0604e-6bbe-4661-a0cd-5b0163c2451f")
 	)
 	(wire
 		(pts
@@ -968,6 +1077,16 @@
 			(type default)
 		)
 		(uuid "70651dee-c6e7-4f2b-b35a-e2764b9fd1f1")
+	)
+	(wire
+		(pts
+			(xy 149.86 92.71) (xy 152.4 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "748a4113-e2b0-4089-891b-e4121b3fd0dd")
 	)
 	(wire
 		(pts
@@ -1028,6 +1147,16 @@
 			(type default)
 		)
 		(uuid "ac625b1f-9c03-465c-94cf-1de733130161")
+	)
+	(wire
+		(pts
+			(xy 162.56 92.71) (xy 165.1 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ae5205ec-0dc1-4b5d-97ab-b4878d1d4f8b")
 	)
 	(wire
 		(pts
@@ -1451,6 +1580,153 @@
 		)
 	)
 	(symbol
+		(lib_id "Switch:SW_DPDT_x2")
+		(at 152.4 97.79 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "31a6bf38-f5b8-4e36-afe6-66b39c492047")
+		(property "Reference" "SW2"
+			(at 157.48 96.5199 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "SW_DPDT_x2"
+			(at 157.48 99.0599 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Button_Switch_THT:SW_CK_JS202011CQN_DPDT_Straight"
+			(at 152.4 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 152.4 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Switch, dual pole double throw, separate symbols"
+			(at 152.4 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "5"
+			(uuid "1ad950b3-3825-4a30-8e4a-220cc292c72f")
+		)
+		(pin "6"
+			(uuid "062bf8b5-8885-40f7-ae3e-e534d40b9210")
+		)
+		(pin "2"
+			(uuid "837ffa03-b22f-4d5a-80d0-3d380eb83b5f")
+		)
+		(pin "1"
+			(uuid "f1c88587-6bf8-4a71-b690-330ad638f104")
+		)
+		(pin "3"
+			(uuid "45a1b063-9bf4-4a86-aad0-3168e046fecd")
+		)
+		(pin "4"
+			(uuid "a01f3962-d1b7-41e0-85bd-6a9bf43c7ba5")
+		)
+		(instances
+			(project ""
+				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
+					(reference "SW2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x01_Pin")
+		(at 175.26 86.36 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "39157eb0-cf05-4cde-baae-89752507a1e2")
+		(property "Reference" "J13"
+			(at 174.625 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "Conn_01x01_Pin"
+			(at 174.625 83.82 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_Wire:SolderWire-1sqmm_1x01_D1.4mm_OD2.7mm"
+			(at 175.26 86.36 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 175.26 86.36 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x01, script generated"
+			(at 175.26 86.36 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "82d1f6ac-1f38-4277-9e67-da2745e0c874")
+		)
+		(instances
+			(project "PCB Design"
+				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
+					(reference "J13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector:Conn_01x01_Pin")
 		(at 175.26 88.9 180)
 		(unit 1)
@@ -1511,6 +1787,88 @@
 				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
 					(reference "J7")
 					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Switch:SW_DPDT_x2")
+		(at 165.1 97.79 90)
+		(unit 2)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "4f143683-fc0f-4230-94ac-217185e9d598")
+		(property "Reference" "SW2"
+			(at 170.18 96.5199 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "SW_DPDT_x2"
+			(at 170.18 99.0599 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Button_Switch_THT:SW_CK_JS202011CQN_DPDT_Straight"
+			(at 165.1 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 165.1 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Switch, dual pole double throw, separate symbols"
+			(at 165.1 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "5"
+			(uuid "1ad950b3-3825-4a30-8e4a-220cc292c72f")
+		)
+		(pin "6"
+			(uuid "062bf8b5-8885-40f7-ae3e-e534d40b9210")
+		)
+		(pin "2"
+			(uuid "837ffa03-b22f-4d5a-80d0-3d380eb83b5f")
+		)
+		(pin "1"
+			(uuid "f1c88587-6bf8-4a71-b690-330ad638f104")
+		)
+		(pin "3"
+			(uuid "45a1b063-9bf4-4a86-aad0-3168e046fecd")
+		)
+		(pin "4"
+			(uuid "a01f3962-d1b7-41e0-85bd-6a9bf43c7ba5")
+		)
+		(instances
+			(project ""
+				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
+					(reference "SW2")
+					(unit 2)
 				)
 			)
 		)
@@ -1873,82 +2231,6 @@
 			(project "PCB Design"
 				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
 					(reference "D5")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Switch:SW_DPST_x2")
-		(at 152.4 97.79 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "83c2db31-15b6-4531-be49-929ac83a816b")
-		(property "Reference" "SW2"
-			(at 153.67 96.5199 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "SW_DPST_x2"
-			(at 153.67 99.0599 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" ""
-			(at 152.4 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 152.4 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Single Pole Single Throw (SPST) switch, separate symbol"
-			(at 152.4 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "4"
-			(uuid "dbcaec31-4763-444a-b297-52ff04b6dcc3")
-		)
-		(pin "3"
-			(uuid "fe8ac330-b5a2-4efd-8a32-fac64c71818c")
-		)
-		(pin "2"
-			(uuid "ac78f1c2-9852-43de-ad09-4f2972e083fb")
-		)
-		(pin "1"
-			(uuid "791ddd30-4dd1-4f0e-8a51-067b313c2a88")
-		)
-		(instances
-			(project ""
-				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
-					(reference "SW2")
 					(unit 1)
 				)
 			)
@@ -2378,82 +2660,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Switch:SW_DPST_x2")
-		(at 165.1 97.79 90)
-		(unit 2)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "b95ce485-2d5b-4c9e-ab5f-5d2c81d47e22")
-		(property "Reference" "SW2"
-			(at 166.37 96.5199 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "SW_DPST_x2"
-			(at 166.37 99.0599 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" ""
-			(at 165.1 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 165.1 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Single Pole Single Throw (SPST) switch, separate symbol"
-			(at 165.1 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "4"
-			(uuid "dbcaec31-4763-444a-b297-52ff04b6dcc4")
-		)
-		(pin "3"
-			(uuid "fe8ac330-b5a2-4efd-8a32-fac64c71818d")
-		)
-		(pin "2"
-			(uuid "ac78f1c2-9852-43de-ad09-4f2972e083fc")
-		)
-		(pin "1"
-			(uuid "791ddd30-4dd1-4f0e-8a51-067b313c2a89")
-		)
-		(instances
-			(project ""
-				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
-					(reference "SW2")
-					(unit 2)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:LED")
 		(at 127 99.06 90)
 		(unit 1)
@@ -2592,6 +2798,71 @@
 			(project ""
 				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
 					(reference "J5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:Conn_01x01_Pin")
+		(at 175.26 91.44 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d5898c22-c11d-44c8-8208-c7a787bc94bd")
+		(property "Reference" "J12"
+			(at 174.625 86.36 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "Conn_01x01_Pin"
+			(at 174.625 88.9 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_Wire:SolderWire-1sqmm_1x01_D1.4mm_OD2.7mm"
+			(at 175.26 91.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 175.26 91.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x01, script generated"
+			(at 175.26 91.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "91b9b130-1033-4845-a3b0-b8b8322f50a0")
+		)
+		(instances
+			(project "PCB Design"
+				(path "/d0d322ed-c639-4fc5-9810-1877935e86d9"
+					(reference "J12")
 					(unit 1)
 				)
 			)
