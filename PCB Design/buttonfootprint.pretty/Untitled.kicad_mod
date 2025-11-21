@@ -1,14 +1,14 @@
-(footprint "SW_SPDT"
+(footprint "Untitled"
 	(version 20241229)
 	(generator "pcbnew")
 	(generator_version "9.0")
 	(layer "F.Cu")
 	(property "Reference" "REF**"
-		(at 0 -0.5 0)
+		(at -12 -8 0)
 		(unlocked yes)
 		(layer "F.SilkS")
 		(hide yes)
-		(uuid "dc7f5081-f9ba-4e46-bc0b-c40e07fd9ae4")
+		(uuid "b3348fbf-c1df-4f9a-aeb2-73fc99336f99")
 		(effects
 			(font
 				(size 1 1)
@@ -16,12 +16,12 @@
 			)
 		)
 	)
-	(property "Value" "SW_SPDT"
-		(at 0 1 0)
+	(property "Value" "Untitled"
+		(at -12 -6.5 0)
 		(unlocked yes)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "86c3e440-b1e6-4f8a-9ffc-1676da4cc1e4")
+		(uuid "744a12a1-f554-4ea6-a6e1-e687bc197d05")
 		(effects
 			(font
 				(size 1 1)
@@ -34,7 +34,7 @@
 		(unlocked yes)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "3eba64a6-c2ae-462a-b5ff-0713afd8e8ce")
+		(uuid "2a97a132-70c3-4d85-9db9-ad4ec90a28e9")
 		(effects
 			(font
 				(size 1 1)
@@ -47,7 +47,7 @@
 		(unlocked yes)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "21c478eb-b059-4232-906c-d83fc37752ae")
+		(uuid "8bfd5661-195a-4c7a-ac04-34309d194de0")
 		(effects
 			(font
 				(size 1 1)
@@ -55,30 +55,24 @@
 			)
 		)
 	)
-	(attr through_hole)
-	(pad "1" thru_hole rect
-		(at 0 -4.7)
-		(size 3.5 2)
-		(drill oval 2.1 0.9)
-		(layers "*.Cu" "*.Mask")
-		(remove_unused_layers no)
-		(uuid "75122954-99ae-4150-b3d4-19c263d966f5")
-	)
-	(pad "2" thru_hole rect
+	(attr smd)
+	(pad "1" thru_hole roundrect
 		(at 0 0)
-		(size 3.5 2)
-		(drill oval 2.1 0.9)
+		(size 3 2)
+		(drill oval 2.1 0.5)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "cc53449f-c592-44bf-b217-e935528c417f")
+		(roundrect_rratio 0.15)
+		(uuid "88cce863-38d9-4722-8a0d-587335e5a9ec")
 	)
-	(pad "3" thru_hole rect
-		(at 0 4.7)
-		(size 3.5 2)
-		(drill oval 2.1 0.9)
+	(pad "2" thru_hole roundrect
+		(at 0 4)
+		(size 3 2)
+		(drill oval 2.1 0.5)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "df651193-c00c-441f-88a2-eb573d8a2659")
+		(roundrect_rratio 0.15)
+		(uuid "c2919251-4a20-4221-8d0c-16f3763e4edc")
 	)
 	(embedded_fonts no)
 )
