@@ -38,8 +38,8 @@
 		(allow_soldermask_bridges_in_footprints no)
 		(tenting front back)
 		(pcbplotparams
-			(layerselection 0x00000000_00000000_55555555_5755f5ff)
-			(plot_on_all_layers_selection 0x00000000_00000000_00000000_00000000)
+			(layerselection 0x00000000_00000000_55555555_55555555)
+			(plot_on_all_layers_selection 0x00000000_00000000_00000000_02000000)
 			(disableapertmacros no)
 			(usegerberextensions no)
 			(usegerberattributes yes)
@@ -72,9 +72,9 @@
 			(subtractmaskfromsilk no)
 			(outputformat 1)
 			(mirror no)
-			(drillshape 1)
+			(drillshape 0)
 			(scaleselection 1)
-			(outputdirectory "")
+			(outputdirectory "PCB Submission/")
 		)
 	)
 	(net 0 "")
@@ -4514,8 +4514,8 @@
 		)
 	)
 	(gr_rect
-		(start 82 56.31)
-		(end 142 96.81)
+		(start 82 57.31)
+		(end 142 95.31)
 		(stroke
 			(width 0.05)
 			(type solid)
@@ -4675,14 +4675,6 @@
 		(layer "B.Cu")
 		(net 8)
 		(uuid "4a922776-8e33-488f-8444-b4a5ff4aaa7c")
-	)
-	(segment
-		(start 134 80)
-		(end 133.5 80)
-		(width 0.8)
-		(layer "B.Cu")
-		(net 8)
-		(uuid "a97b85c0-c4fd-4f47-b8eb-f35cf0bda5c6")
 	)
 	(segment
 		(start 132.5 79.5)
