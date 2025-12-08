@@ -38,23 +38,24 @@ def cross_correlate(buffers, crazy_frog):
     print("--- Cross Correlation Time ---")
 
     np_buffers = [np.array(b) for b in buffers]
-
-    dc_fixed_buffers = [np.subtract(mic_buffers[0], np.mean(mic_buffers[0])),
-                        np.subtract(mic_buffers[1], np.mean(mic_buffers[1])),
-                        np.subtract(mic_buffers[2], np.mean(mic_buffers[2]))]
-
-    normalised_buffers = [dc_fixed_buffers[0] / np.max(np.abs(dc_fixed_buffers[0])),
-                          dc_fixed_buffers[1] / np.max(np.abs(dc_fixed_buffers[1])),
-                          dc_fixed_buffers[2] / np.max(np.abs(dc_fixed_buffers[2]))]
-
+    
+    #removing dc offset
+    dc_fixed_buffers = [np.subtract(np_buffers[0], np.mean(np_buffers[0])),
+                        np.subtract(np_buffers[1], np.mean(np_buffers[1])),
+                        np.subtract(np_buffers[2], np.mean(np_buffers[2]))]
+    #normalising buffers between 1 and -1
+    normalised_buffers = [dc_fixed_buffers[0] / np.max(np.abs(dc_fixed_buffers)),
+                          dc_fixed_buffers[1] / np.max(np.abs(dc_fixed_buffers)),
+                          dc_fixed_buffers[2] / np.max(np.abs(dc_fixed_buffers))]
+    #finding loudest mic - might be useful
     mic_max = [np.max(normalised_buffers[0]), np.max(normalised_buffers[1]), np.max(normalised_buffers[2])]
     mic_scores = np.zeros(3)
-
+    #cross correlation
     mic_scores[0] = np.max(np.abs(scipy.signal.correlate(crazy_frog, normalised_buffers[0], mode='valid')))
     mic_scores[1] = np.max(np.abs(scipy.signal.correlate(crazy_frog, normalised_buffers[1], mode='valid')))
     mic_scores[2] = np.max(np.abs(scipy.signal.correlate(crazy_frog, normalised_buffers[2], mode='valid')))
 
-    print(f"Mic values: {mic_max}")
+    print(f"Mic max values: {mic_max}")
     print(f"Correlation max values: {mic_scores}")
     print(f"Mic {np.argmax(mic_scores) + 1} is the craziest frog.")
     print("-" * 40)
@@ -85,11 +86,11 @@ while True:
                 # End marker missing, synchronization lost! Discard and resync.
                 print("Sync lost! Resyncing...")
                 continue
-
+            #unpacking arduino data
             m1 = packed_data[0] << 2 | (packed_data[1] & 0xF0) >> 6
             m2 = (packed_data[1] & 0x3F) << 4 | (packed_data[2] & 0xF0) >> 4
             m3 = (packed_data[2] & 0x0F) << 6 | (packed_data[3] & 0x3F)
-
+            #stopping zero that occurs at the start of every buffer
             if m1 != 0 and m2 != 0 and m3 != 0:
                 mic_buffers[0].append(m1)
                 mic_buffers[1].append(m2)
@@ -98,12 +99,13 @@ while True:
             # 6. Check if buffers are full
             if len(mic_buffers[0]) >= BUFFER_SIZE:
 
-
+                #finding best signal mic
                 current_mic_value = cross_correlate(mic_buffers, crazy_frog)
-
+                #removing oldest value from list and adding new one
                 last_5_mic_values.pop(0)
                 last_5_mic_values.append(int(current_mic_value))
 
+                #trying to remove potential random incorrect mic outputs
                 count = np.array([0,0,0])
 
                 for i in last_5_mic_values:
