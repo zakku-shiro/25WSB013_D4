@@ -1,10 +1,3 @@
-/* 
-   1) green LED: Robot spins 360° (searching).
-   2) green LED: Robot processes then turns 180° to face the source.
-   3) yellow LED: Robot moves towards source, slowing down as it gets closer.
-      - Stops at ~30cm and ~20cm to validate direction.
-   4) red LED: At <=5cm stops all motors.
-*/
 
 int E1 = 6; 
 int E2 = 5;
