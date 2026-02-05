@@ -1,4 +1,4 @@
-26763792345342095
+26769083476588683
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -16750,6 +16750,13 @@ Through hole vertical IDC box header THT 2x32 2.54mm double row
 0
 64
 64
+Connector_IDC
+Untitled
+
+
+0
+3
+3
 Connector_JAE
 JAE_LY20-4P-DLT1_2x02_P2.00mm_Horizontal
 Molex LY 20 series connector, LY20-4P-DLT1, 2 Circuits (http://www.jae.com/z-en/pdf_download_exec.cfm?param=SJ038187.pdf), generated with kicad-footprint-generator
@@ -106364,6 +106371,13 @@ Varistor VF
 0
 2
 2
+buttonfootprint
+Untitled
+
+
+0
+2
+2
 footprint_swtichespretty
 SPDT_throughole_footprint
 
@@ -106371,3 +106385,10 @@ SPDT_throughole_footprint
 0
 0
 0
+footprints 
+SW_SPDT
+
+
+0
+3
+3
