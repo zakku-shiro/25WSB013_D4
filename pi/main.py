@@ -1,41 +1,37 @@
+import os
 import cv2
+import dotenv
+dotenv.load_dotenv()
 from filter_gui import FilterGUI
 from camera import Camera
 import numpy as np
 import time
 
-IS_RUNNING_ON_PI = False
-VIDEO_OUTPUT_ENABLED = False
+IS_RUNNING_ON_PI = bool(os.getenv("IS_RUNNING_ON_PI"))
+IS_VIDEO_OUTPUT_ENABLED = bool(os.getenv("IS_VIDEO_OUTPUT_ENABLED"))
 
 # Pattern Matching Configs
-image_led_pattern = cv2.resize(cv2.imread("res/led_pattern.png", cv2.IMREAD_COLOR_BGR), (0,0), fx = 1, fy = 1)
+image_led_pattern = cv2.imread(os.getenv("LIGHT_PATTERN_IMAGE_PATH"), cv2.IMREAD_COLOR_BGR)
 led_pattern_width = image_led_pattern.shape[1]
 led_pattern_height = image_led_pattern.shape[0]
 
-image_board_pattern = cv2.imread("res/board_pattern_color.png", cv2.IMREAD_COLOR_BGR)
+# TODO: investigate IMREAD_COLOR_RGB vs IMREAD_COLOR_BGR
+image_board_pattern = cv2.imread(os.getenv("BOARD_PATTERN_IMAGE_PATH"), cv2.IMREAD_COLOR_BGR)
 board_pattern_width = image_board_pattern.shape[1]
 board_pattern_height = image_board_pattern.shape[0]
 
-LIGHT_PATTERN_CONFIDENCE    = 0.15
-BOARD_PATTERN_CONFIDENCE    = 0.30
-BOARD_REGION_TOLERANCE      = 0.1
-# LAST_SEEN_MOVEMENT_TOLERANCE = 0.2
-# STABILITY_COUNTER_MAX = 100
+LIGHT_PATTERN_CONFIDENCE        = float(os.getenv("LIGHT_PATTERN_CONFIDENCE"))
+BOARD_PATTERN_CONFIDENCE        = float(os.getenv("BOARD_PATTERN_CONFIDENCE"))
+BOARD_REGION_TOLERANCE          = float(os.getenv("BOARD_REGION_TOLERANCE"))
+LAST_SEEN_MOVEMENT_TOLERANCE    = float(os.getenv("LAST_SEEN_MOVEMENT_TOLERANCE"))
+STABILITY_COUNTER_MAX           = int(os.getenv("STABILITY_COUNTER_MAX"))
 
 # Camera Initialization Configs
 main_camera = Camera(IS_RUNNING_ON_PI)
 
 # Computer Vision Configs
-if IS_RUNNING_ON_PI:
-    board_filter_gui = FilterGUI("Board Filter", 100, 179, 0, 255, 0, 255, -255, 0)
-    light_filter_gui = FilterGUI("Light Filter", 5, 30, 0, 255, 200, 255, 255, 0)
-else:
-    # board_filter_gui = FilterGUI("Board Filter", 0, 3, 0, 255, 0, 255, -255, 255)
-    # board pattern color
-    board_filter_gui = FilterGUI("Board Filter", 176, 179, 0, 255, 150, 255, -75, 5)
-    # light_filter_gui = FilterGUI("Light Filter", 0, 10, 0, 255, 200, 255, 255, -15)
-    # led pattern 2
-    light_filter_gui = FilterGUI("Light Filter", 0, 179, 0, 255, 190, 255, 255, -50)
+board_filter_gui = FilterGUI("Board Filter", [int(x) for x in os.getenv("BOARD_FILTER_VALUES").split(",")])
+light_filter_gui = FilterGUI("Light Filter", [int(x) for x in os.getenv("LIGHT_FILTER_VALUES").split(",")])
 
 def apply_hsv_filter(input_frame_bgr, hsv_filter: FilterGUI):
     image_hsv = cv2.cvtColor(input_frame_bgr, cv2.COLOR_BGR2HSV)
@@ -64,9 +60,12 @@ def apply_hsv_shift(channel, amount):
         channel[channel > lim] -= amount
     return channel
 
-if VIDEO_OUTPUT_ENABLED:
+if IS_VIDEO_OUTPUT_ENABLED:
     video_writer = cv2.VideoWriter("output.mp4", cv2.VideoWriter_fourcc(*"MP4V"), main_camera.TARGET_FPS, (main_camera.FRAME_WIDTH, main_camera.FRAME_HEIGHT))
     video_writer_filtered = cv2.VideoWriter("output_filtered.mp4", cv2.VideoWriter_fourcc(*"MP4V"), main_camera.TARGET_FPS, (main_camera.FRAME_WIDTH, main_camera.FRAME_HEIGHT))
+else:
+    video_writer = None
+    video_writer_filtered = None
 
 previous_frame_time = 0
 current_frame_time = 0
@@ -86,7 +85,7 @@ while True:
         print(f"Board match confidence: {board_best_confidence:.2%}")
         board_top_left = board_best_location
         board_bottom_right = (board_top_left[0] + board_pattern_width, board_top_left[1] + board_pattern_height)
-        cv2.rectangle(board_filtered_frame, board_top_left, board_bottom_right, (255, 0, 0), 2)
+        cv2.rectangle(frame, board_top_left, board_bottom_right, (255, 0, 0), 2)
 
         # ((x0,y0), (x1,y1))
         light_search_window = ((max(0, int(board_top_left[0] - (board_pattern_width * BOARD_REGION_TOLERANCE))),
@@ -112,7 +111,7 @@ while True:
     cv2.imshow("Light Filtering", light_filtered_frame)
     cv2.imshow("Camera View", frame)
 
-    if VIDEO_OUTPUT_ENABLED:
+    if IS_VIDEO_OUTPUT_ENABLED:
         video_writer.write(frame)
         video_writer_filtered.write(board_filtered_frame)
 

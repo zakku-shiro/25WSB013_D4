@@ -5,3 +5,5 @@
 .vscode/ipch
 *.mp4
 .idea
+**/.env
+**/__pycache__/**
