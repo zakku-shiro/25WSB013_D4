@@ -7,8 +7,8 @@ from camera import Camera
 import numpy as np
 import time
 
-IS_RUNNING_ON_PI = bool(os.getenv("IS_RUNNING_ON_PI"))
-IS_VIDEO_OUTPUT_ENABLED = bool(os.getenv("IS_VIDEO_OUTPUT_ENABLED"))
+IS_RUNNING_ON_PI = bool(int(os.getenv("IS_RUNNING_ON_PI")))
+IS_VIDEO_OUTPUT_ENABLED = bool(int(os.getenv("IS_VIDEO_OUTPUT_ENABLED")))
 
 # Pattern Matching Configs
 image_led_pattern = cv2.imread(os.getenv("LIGHT_PATTERN_IMAGE_PATH"), cv2.IMREAD_COLOR_BGR)
@@ -30,8 +30,8 @@ STABILITY_COUNTER_MAX           = int(os.getenv("STABILITY_COUNTER_MAX"))
 main_camera = Camera(IS_RUNNING_ON_PI)
 
 # Computer Vision Configs
-board_filter_gui = FilterGUI("Board Filter", [int(x) for x in os.getenv("BOARD_FILTER_VALUES").split(",")])
-light_filter_gui = FilterGUI("Light Filter", [int(x) for x in os.getenv("LIGHT_FILTER_VALUES").split(",")])
+board_filter_gui = FilterGUI("Board Filter", *[int(x) for x in os.getenv("BOARD_FILTER_VALUES").split(",")])
+light_filter_gui = FilterGUI("Light Filter", *[int(x) for x in os.getenv("LIGHT_FILTER_VALUES").split(",")])
 
 def apply_hsv_filter(input_frame_bgr, hsv_filter: FilterGUI):
     image_hsv = cv2.cvtColor(input_frame_bgr, cv2.COLOR_BGR2HSV)
