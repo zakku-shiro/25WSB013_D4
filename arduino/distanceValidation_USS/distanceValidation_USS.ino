@@ -1,4 +1,3 @@
-
 int E1 = 6;
 int E2 = 5;
 int M1 = 8;
@@ -8,10 +7,10 @@ const int trigPin = 9;
 const int echoPin = 10;
 
 // Tunables
-const int SWEEP_PWM = 150;                  // adjust 120–200
-const unsigned long SWEEP_MS_180 = 2200;    // estimated time of spinning
+const int SWEEP_PWM = 90;                  // adjust 120–200
+const unsigned long SWEEP_MS_180 = 5500;    // estimated time of spinning
 const unsigned long SWEEP_MS_MAX = 6000;    //prevents multiple spinning 
-const unsigned long SAMPLE_PERIOD_MS = 100;
+const unsigned long SAMPLE_PERIOD_MS = 50;
 
 const float DEG_PER_MS = 180.0f / (float)SWEEP_MS_180;
 
@@ -62,7 +61,7 @@ void smoothSweep180WithLogging() {
       Serial.print(angle, 2);
       Serial.print(",");
 
-      if (d == 0) Serial.println("error");
+      if (d == 0) Serial.println("0");
       else Serial.println(d);
 
       nextSample += SAMPLE_PERIOD_MS;
