@@ -1,3 +1,4 @@
+import os
 import cv2
 
 class Camera:
@@ -17,23 +18,16 @@ class Camera:
     def setup_pi_camera(self):
         from picamera2 import Picamera2
 
-        self.FRAME_WIDTH = 320
-        self.FRAME_HEIGHT = 240
-        # self.TARGET_FPS = 10
+        self.FRAME_WIDTH = int(os.getenv("FRAME_WIDTH"))
+        self.FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))
+        self.TARGET_FPS = int(os.getenv("FRAME_RATE"))
 
         self.camera = Picamera2()
-        # camera_config = self.camera.create_preview_configuration(main={
-        #     "size": (self.FRAME_WIDTH, self.FRAME_HEIGHT),
-        #     "format": "RGB888"
-        # })
-        # self.camera.configure(camera_config)
-        # self.camera.set_controls({"FrameRate": self.TARGET_FPS})
         config = self.camera.create_preview_configuration(
-            main={"size": (320, 240), "format": "RGB888"},
+            main={"size": (self.FRAME_WIDTH, self.FRAME_HEIGHT), "format": "RGB888"},
             controls={
-                "FrameRate": 30,
-                "ExposureTime": 10000,  # in microseconds
-                "AnalogueGain": 1.0
+                "FrameRate": self.TARGET_FPS,
+                "ExposureValue": int(os.getenv("PI_ABS_EXPOSURE")),
             }
         )
         self.camera.configure(config)
@@ -44,16 +38,16 @@ class Camera:
         if not self.camera.isOpened():
             print("Could not open webcam.")
             exit(1)
-        self.FRAME_WIDTH = 320
-        self.FRAME_HEIGHT = 240
-        # self.TARGET_FPS = int(self.camera.get(cv2.CAP_PROP_FPS))
+        self.FRAME_WIDTH = int(os.getenv("FRAME_WIDTH"))
+        self.FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))
+        self.TARGET_FPS = int(os.getenv("FRAME_RATE"))
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.FRAME_WIDTH)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.FRAME_HEIGHT)
-        # self.camera.set(cv2.CAP_PROP_FPS, self.TARGET_FPS)
+        self.camera.set(cv2.CAP_PROP_FPS, self.TARGET_FPS)
 
         # Prevent auto-exposure
         self.camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-        self.camera.set(cv2.CAP_PROP_EXPOSURE, -6)
+        self.camera.set(cv2.CAP_PROP_EXPOSURE, int(os.getenv("WIN_ABS_EXPOSURE")))
 
     def capture_frame(self):
         if self.IS_RUNNING_ON_PI:
