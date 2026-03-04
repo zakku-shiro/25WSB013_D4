@@ -28,6 +28,8 @@ class Camera:
             controls={
                 "FrameRate": self.TARGET_FPS,
                 "ExposureValue": int(os.getenv("PI_ABS_EXPOSURE")),
+                "AeEnable": False,  # Disable auto-exposure
+                "AwbEnable": False, # Disable auto-white-balance
             }
         )
         self.camera.configure(config)
@@ -47,6 +49,7 @@ class Camera:
 
         # Prevent auto-exposure
         self.camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+        self.camera.set(cv2.CAP_PROP_AUTO_WB, 0)
         self.camera.set(cv2.CAP_PROP_EXPOSURE, int(os.getenv("WIN_ABS_EXPOSURE")))
 
     def capture_frame(self):
