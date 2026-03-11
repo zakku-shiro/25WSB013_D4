@@ -1,64 +1,40 @@
+import math
 import os
+import time
 import cv2
 import dotenv
-dotenv.load_dotenv()
-from filter_gui import FilterGUI
-from camera import Camera
 import numpy as np
-import time
+from camera import Camera
 
+def calc_circularity(c):
+    """Calculates the circularity for reflection filtering."""
+    area = cv2.contourArea(c)
+    perimeter = cv2.arcLength(c, True)
+    if perimeter == 0: return 0
+    return (4 * math.pi * area) / (perimeter ** 2)
+
+def lerp(a: float, b: float, t: float) -> float:
+    """Linear interpolate on the scale given by a to b, using t as the point on that scale."""
+    return (1 - t) * a + t * b
+
+dotenv.load_dotenv()
+# ====== Dotenv Configs ======
 IS_RUNNING_ON_PI = bool(int(os.getenv("IS_RUNNING_ON_PI")))
 IS_VIDEO_OUTPUT_ENABLED = bool(int(os.getenv("IS_VIDEO_OUTPUT_ENABLED")))
 
-# Pattern Matching Configs
-image_led_pattern = cv2.imread(os.getenv("LIGHT_PATTERN_IMAGE_PATH"), cv2.IMREAD_COLOR_BGR)
-led_pattern_width = image_led_pattern.shape[1]
-led_pattern_height = image_led_pattern.shape[0]
+FRAME_WIDTH = int(os.getenv("FRAME_WIDTH"))
+FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT"))
 
-# TODO: investigate IMREAD_COLOR_RGB vs IMREAD_COLOR_BGR
-image_board_pattern = cv2.imread(os.getenv("BOARD_PATTERN_IMAGE_PATH"), cv2.IMREAD_COLOR_BGR)
-board_pattern_width = image_board_pattern.shape[1]
-board_pattern_height = image_board_pattern.shape[0]
+MIN_AREA = int(os.getenv("MIN_AREA")) # Minimum LED size
+MAX_AREA = int(os.getenv("MAX_AREA")) # Maximum LED size
+MIN_CIRCULARITY = float(os.getenv("MIN_CIRCULARITY")) # Reflection filtering
+VALUE_MIN = int(os.getenv("VALUE_MIN"))
 
-LIGHT_PATTERN_CONFIDENCE        = float(os.getenv("LIGHT_PATTERN_CONFIDENCE"))
-BOARD_PATTERN_CONFIDENCE        = float(os.getenv("BOARD_PATTERN_CONFIDENCE"))
-BOARD_REGION_TOLERANCE          = float(os.getenv("BOARD_REGION_TOLERANCE"))
-LAST_SEEN_MOVEMENT_TOLERANCE    = float(os.getenv("LAST_SEEN_MOVEMENT_TOLERANCE"))
-STABILITY_COUNTER_MAX           = int(os.getenv("STABILITY_COUNTER_MAX"))
+SMOOTHING_ALPHA = float(os.getenv("SMOOTHING_ALPHA")) # 0->1 responsive & jittery -> floaty & smooth
+# ============================
 
 # Camera Initialization Configs
 main_camera = Camera(IS_RUNNING_ON_PI)
-
-# Computer Vision Configs
-board_filter_gui = FilterGUI("Board Filter", *[int(x) for x in os.getenv("BOARD_FILTER_VALUES").split(",")])
-light_filter_gui = FilterGUI("Light Filter", *[int(x) for x in os.getenv("LIGHT_FILTER_VALUES").split(",")])
-
-def apply_hsv_filter(input_frame_bgr, hsv_filter: FilterGUI):
-    image_hsv = cv2.cvtColor(input_frame_bgr, cv2.COLOR_BGR2HSV)
-
-    h, s, v = cv2.split(image_hsv)
-    s = apply_hsv_shift(s, hsv_filter.sat_off)
-    v = apply_hsv_shift(v, hsv_filter.val_off)
-    image_hsv = cv2.merge((h, s, v))
-
-    lower_bounds = np.array([hsv_filter.hue_min, hsv_filter.sat_min, hsv_filter.val_min])
-    upper_bounds = np.array([hsv_filter.hue_max, hsv_filter.sat_max, hsv_filter.val_max])
-    mask = cv2.inRange(image_hsv, lower_bounds, upper_bounds)
-    result = cv2.bitwise_and(image_hsv, image_hsv, mask = mask)
-
-    return cv2.cvtColor(result, cv2.COLOR_HSV2BGR)
-
-def apply_hsv_shift(channel, amount):
-    if amount > 0:
-        lim = 255 - amount
-        channel[channel >= lim] = 255
-        channel[channel < lim] += amount
-    elif amount < 0:
-        amount *= -1
-        lim = amount
-        channel[channel <= lim] = 0
-        channel[channel > lim] -= amount
-    return channel
 
 if IS_VIDEO_OUTPUT_ENABLED:
     video_writer = cv2.VideoWriter("output.mp4", cv2.VideoWriter_fourcc(*"MP4V"), main_camera.TARGET_FPS, (main_camera.FRAME_WIDTH, main_camera.FRAME_HEIGHT))
@@ -69,6 +45,8 @@ else:
 
 previous_frame_time = 0
 current_frame_time = 0
+smoothed_x = None
+smoothed_y = None
 while True:
     current_frame_time = time.time()
     fps = "FPS: " + str(round(1 / (current_frame_time - previous_frame_time), 2))
@@ -76,44 +54,97 @@ while True:
     print(fps)
 
     frame = main_camera.capture_frame()
-    light_filtered_frame = apply_hsv_filter(frame, light_filter_gui)
-    board_filtered_frame = apply_hsv_filter(frame, board_filter_gui)
 
-    board_matches = cv2.matchTemplate(board_filtered_frame, image_board_pattern, cv2.TM_CCOEFF_NORMED)
-    _, board_best_confidence, _, board_best_location = cv2.minMaxLoc(board_matches)
-    if board_best_confidence > BOARD_PATTERN_CONFIDENCE:
-        print(f"Board match confidence: {board_best_confidence:.2%}")
-        board_top_left = board_best_location
-        board_bottom_right = (board_top_left[0] + board_pattern_width, board_top_left[1] + board_pattern_height)
-        cv2.rectangle(frame, board_top_left, board_bottom_right, (255, 0, 0), 2)
+    # HSV Color Filtering
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        # ((x0,y0), (x1,y1))
-        light_search_window = ((max(0, int(board_top_left[0] - (board_pattern_width * BOARD_REGION_TOLERANCE))),
-                                max(0, int(board_top_left[1] - (board_pattern_height * BOARD_REGION_TOLERANCE)))),
-                               (min(main_camera.FRAME_WIDTH, int(board_bottom_right[0] + (board_pattern_width * BOARD_REGION_TOLERANCE))),
-                                min(main_camera.FRAME_HEIGHT, int(board_bottom_right[1] + (board_pattern_height * BOARD_REGION_TOLERANCE)))))
-        cv2.rectangle(frame, light_search_window[0], light_search_window[1], (0, 165, 255), 2)
+    # HSV values for red wrap around at the end, hence the upper and lower bands.
+    lower_red1 = np.array([0, 120, VALUE_MIN])
+    upper_red1 = np.array([10, 255, 255])
+    lower_red2 = np.array([170, 120, VALUE_MIN])
+    upper_red2 = np.array([180, 255, 255])
 
-        light_matches = cv2.matchTemplate(light_filtered_frame[
-                                            board_top_left[1]:(board_top_left[1] + board_pattern_height),
-                                            board_top_left[0]:(board_top_left[0] + board_pattern_width),
-                                          ], image_led_pattern, cv2.TM_CCOEFF_NORMED)
-        _, light_best_confidence, _, light_best_location = cv2.minMaxLoc(light_matches)
-        if light_best_confidence > LIGHT_PATTERN_CONFIDENCE:
-            print(f"Light match confidence: {light_best_confidence:.2%}")
-            light_top_left = (light_search_window[0][0] + light_best_location[0], light_search_window[0][1] + light_best_location[1])
-            light_bottom_right = (light_top_left[0] + led_pattern_width, light_top_left[1] + led_pattern_height)
-            cv2.rectangle(frame, light_top_left, light_bottom_right, (0, 255, 0), 2)
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    frame_red_filtered = mask1 | mask2
 
+    # Erode and Dilate to clean up noise and smoothen edges
+    kernel = np.ones((3, 3), np.uint8)
+    eroded_frame = cv2.morphologyEx(frame_red_filtered, cv2.MORPH_OPEN, kernel)
+    dilated_frame = cv2.morphologyEx(eroded_frame, cv2.MORPH_CLOSE, kernel)
+
+    # Find contours using the inexpensive CHAIN_APPROX_SIMPLE and only returning outer rings for the LED.
+    contours, _ = cv2.findContours(
+        dilated_frame,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    # Filter for valid contour rings (goldilocks) then find the largest and most circular
+    candidates = [
+        c for c in contours
+        if MIN_AREA < cv2.contourArea(c) < MAX_AREA
+           and calc_circularity(c) > MIN_CIRCULARITY
+    ]
+    best_contour = max(candidates, key = cv2.contourArea, default = None)
+
+    if best_contour is None:
+        # We've either lost it or not found it yet, clear values accordingly.
+        smoothed_x = None
+        smoothed_y = None
+    else:   # We have a match.
+        print(calc_circularity(best_contour))
+        """
+        Horrifically cool function that blends physics with computer vision.
+        Essentially, m00 is the 'mass' of the 'object' shown in the mask,
+        being calculated as the summation or count of all '1' pixels indicating
+        red/valid pixels in our mask. This makes m10 and m01 the moments about
+        the x and y axis respectively - this distribution representation gives
+        us a rough understanding of the centre of the LED.
+        """
+        matrix_moments = cv2.moments(best_contour)
+        if matrix_moments["m00"] != 0:
+            cx = int(matrix_moments["m10"] / matrix_moments["m00"])
+            cy = int(matrix_moments["m01"] / matrix_moments["m00"])
+
+            if smoothed_x is None:
+                # If this is our first detection, just use the central values.
+                smoothed_x = cx
+                smoothed_y = cy
+            else:
+                # Otherwise, linearly interpolate across the new and old pos.
+                smoothed_x = lerp(smoothed_x, cx, SMOOTHING_ALPHA)
+                smoothed_y = lerp(smoothed_y, cy, SMOOTHING_ALPHA)
+
+
+            # Draw detection circle.
+            cv2.circle(frame, (int(smoothed_x), int(smoothed_y)),
+                       8, (0,255,0), 2)
+
+            # Calculate the offset from the centre of the frame.
+            error_x = smoothed_x - FRAME_WIDTH / 2
+            error_y = smoothed_y - FRAME_HEIGHT / 2
+
+            print(f"LED: {int(smoothed_x)}, {int(smoothed_y)} | "
+                  f"ErrX: {int(error_x)}")
+
+            # TODO: send serial data here to arduino
+
+
+    # FPS text
     cv2.putText(frame, fps, (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0),
                 2, cv2.LINE_AA)
-    cv2.imshow("Board Filtering", board_filtered_frame)
-    cv2.imshow("Light Filtering", light_filtered_frame)
+
+    # Display debugging windows
     cv2.imshow("Camera View", frame)
+    cv2.imshow("Masked Frame", dilated_frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
     if IS_VIDEO_OUTPUT_ENABLED:
         video_writer.write(frame)
-        video_writer_filtered.write(board_filtered_frame)
+        video_writer_filtered.write(dilated_frame)
 
     if cv2.waitKey(1) == ord("q"):
         break
