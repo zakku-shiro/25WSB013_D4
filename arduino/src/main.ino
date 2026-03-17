@@ -11,6 +11,7 @@
 #define MOTOR_MIN_SPEED 1
 #define MOTOR_HALF_SPEED 127
 #define MOTOR_MAX_SPEED 255
+#define BAUD_RATE 500000
 
 #include <Arduino.h>
 #include <pins_arduino.h>
@@ -88,7 +89,7 @@ void stopMotors() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(BAUD_RATE);
   Serial.println("Serial Initialized");
   // GPIO Setup
   for (uint8_t i = 5; i <= 8; i++) {
