@@ -29,6 +29,9 @@ void setup() {
   ADCSRA |= (1 << ADIE);//enable ADC Interrupt (ADIE)
   ADCSRA |= (1 << ADEN);// enable ADC (ADEN)
   ADCSRA |= (1 << ADSC);// start the first ADC conversion (ADSC)
+
+  ADCSRA |= (1<<ADPS2)|(1<<ADPS0); //doubles adc prescaler to 32 for sped
+}
 }
 
 void loop() {
