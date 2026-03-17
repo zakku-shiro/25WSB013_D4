@@ -3,7 +3,7 @@ import serial
 import time
 
 class Signals(enum.IntEnum):
-    ZERO = 0
+    PING = 0
     ERROR = 1
     ACKNOWLEDGE = 2
     SOUND_DATA = 3
@@ -64,24 +64,35 @@ ser.setDTR(True)
 time.sleep(2)
 
 while True:
-    print("Start blinking")
-    send_packet(Signals.LED_COMMAND, bytes([1]))
-
+    # print("Start blinking")
+    # send_packet(Signals.LED_COMMAND, bytes([1]))
+    #
+    # while True:
+    #     msg_type, _ = read_packet()
+    #     if msg_type == Signals.ACKNOWLEDGE:
+    #         print("Arduino ACK")
+    #         break
+    #
+    # time.sleep(2)
+    #
+    # print("Stop blinking")
+    # send_packet(Signals.LED_COMMAND, bytes([0]))
+    #
+    # while True:
+    #     msg_type, _ = read_packet()
+    #     if msg_type == Signals.ACKNOWLEDGE:
+    #         print("Arduino ACK")
+    #         break
+    #
+    # time.sleep(2)
+    direction, speed = [int(x) for x in input("<Move,Speed>: ").split(",")]
+    send_packet(Signals.MOVE_COMMAND, bytes([direction, speed]))
     while True:
-        msg_type, _ = read_packet()
+        msg_type, payload = read_packet()
         if msg_type == Signals.ACKNOWLEDGE:
             print("Arduino ACK")
             break
-
-    time.sleep(2)
-
-    print("Stop blinking")
-    send_packet(Signals.LED_COMMAND, bytes([0]))
-
-    while True:
-        msg_type, _ = read_packet()
-        if msg_type == Signals.ACKNOWLEDGE:
-            print("Arduino ACK")
-            break
-
-    time.sleep(2)
+        elif msg_type == Signals.ERROR:
+            print(f"Arduino ERROR: {payload}")
+        else:
+            print(f"Arduino COMM ERROR: {msg_type}, {payload}:")
