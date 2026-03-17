@@ -1,6 +1,11 @@
 import enum
+import os
 import serial
 import time
+
+import dotenv
+dotenv.load_dotenv()
+SERIAL_PORT = os.getenv("SERIAL_PORT")
 
 class Signals(enum.IntEnum):
     PING = 0
@@ -55,7 +60,7 @@ def read_packet():
 
 
 # Serial Initialization
-ser = serial.Serial("COM6", 500000, timeout=1)
+ser = serial.Serial(SERIAL_PORT, 500000, timeout=1)
 # Reset Arduino cleanly
 ser.setDTR(False)
 time.sleep(1)
