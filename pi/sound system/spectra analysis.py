@@ -3,6 +3,7 @@ import serial
 import numpy as np
 import librosa as lb
 import traceback
+from scipy.ndimage import gaussian_filter1d
 import scipy
 #from scipy import signal
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ BAUD_RATE = 500000
 FRAME_SIZE = 6
 DATA_BYTES = 4
 NUM_MICS = 3
-SAMPLE_RATE = 8400  # estimated sample rate
+SAMPLE_RATE = 8325  # estimated sample rate
 
 BUFFER_SIZE = 1024
 
@@ -24,15 +25,18 @@ data_ptr = 0
 
 last_5_mic_values = [0,0,0,0,0]
 
-crazy_frog1,sr = lb.load("C:/Users/bruno/PyCharmMiscProject/Crazy Frog - Axel F.mp3",sr=SAMPLE_RATE,duration=1.5,offset=30)
+crazy_frog1,sr = lb.load("C:/Users/bruno/PyCharmMiscProject/Crazy Frog - Axel F.mp3",sr=SAMPLE_RATE,duration=0.5,offset=30)
 
 #need to change file path for the pi
-f, s, crazy_stft = sg.stft(crazy_frog1, fs=SAMPLE_RATE, nperseg=512, noverlap=0)
-crazy_stft1 = crazy_stft[40:400, :]
+f, s, crazy_stft = sg.stft(crazy_frog1, fs=SAMPLE_RATE, nperseg=512, noverlap=256)
+crazy_stft1 = np.abs(crazy_stft)[40:220, :]
 
-median_stft_ref = np.median(np.abs(crazy_stft1), axis=1)
+#median_stft_ref = np.median(np.abs(crazy_stft1), axis=1)
+max_stft_ref = np.max(crazy_stft1, axis=1)
+
+median_stft_ref = gaussian_filter1d(max_stft_ref, sigma=1.5)
 stft_ref_minmean = median_stft_ref - np.mean(median_stft_ref)
-stft_ref_squ = stft_ref_minmean ** 2
+stft_ref_squ = np.maximum(stft_ref_minmean,0)
 ref_norm = np.linalg.norm(stft_ref_squ)
 
 # fig, ax = plt.subplots()
@@ -57,25 +61,30 @@ def make_spectra(buffers, stft_ref_squ, ref_norm):
     dc_fixed = buffers - np.mean(buffers, axis=1, keepdims=True)
 
     #finding rms volume to eliminate noise
-    if np.max(np.sqrt(np.mean(dc_fixed**2,axis=1))) < 4.5:
+    rms = np.sqrt(np.mean(dc_fixed**2,axis=1))
+    if  np.max(rms) < 4.5:
         return [0.0, 0.0, 0.0]
 
     #stft on samples
-    f, s, Zxx = sg.stft(dc_fixed, fs=SAMPLE_RATE, nperseg=512, noverlap=0)
+    f, s, Zxx = sg.stft(dc_fixed, fs=SAMPLE_RATE, nperseg=512, noverlap=256)
 
     # Get median across the time frames (axis 2)
-    live_medians = np.median(np.abs(Zxx), axis=2)
+    #live_medians = np.median(np.abs(Zxx), axis=2)
+    live_maxes = np.max(np.abs(Zxx), axis=2)
     # Slice to match your 40:400 reference
-    live_clipped = live_medians[:, 40:400]
+    live_clipped = live_maxes[:, 40:220]
+    live_clipped = gaussian_filter1d(live_clipped, sigma=1.5)
 
     #mean square to ignore people noise
     live_min_mean = live_clipped - np.mean(live_clipped, axis=1, keepdims=True)
-    live_sq = live_min_mean ** 2
+    live_sq = np.maximum(live_min_mean,0)
 
     # Dot product for all 3 mics
     scores = np.dot(live_sq, stft_ref_squ) / (np.linalg.norm(live_sq, axis=1) * ref_norm + 1e-9)
 
-    return scores.tolist()
+    weighted_scores = scores * (rms / (rms + 50))
+
+    return weighted_scores.tolist()
 
 # --- Main Loop ---
 
