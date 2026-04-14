@@ -129,7 +129,12 @@ while True:
                     print(f"SR: {BUFFER_SIZE / duration:.0f}Hz", end=" | ")
 
                     scores = make_spectra(mic_data, stft_ref_squ, ref_norm)
-                    print(f"Scores: {[round(s, 2) for s in scores]}")
+                    #scores are generally quite low basically always below 0.5 due to rms weighting
+                    bestmic = np.argmax(scores)
+                    confidence = scores[bestmic] - np.mean([s for i, s in enumerate(scores) if i != bestmic])
+                    print(f"Scores: {[round(s, 2) for s in scores]}, Best: {bestmic+1}, Confidence: {confidence:.2f}")
+                    #if confidence is > 0.15 when no other sounds, probably the song
+
 
                     data_ptr = 0
                     ser.reset_input_buffer()  # Clear the "math lag"
