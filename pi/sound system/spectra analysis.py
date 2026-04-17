@@ -4,11 +4,8 @@ import numpy as np
 import librosa as lb
 import traceback
 from scipy.ndimage import gaussian_filter1d
-import scipy
-#from scipy import signal
-import matplotlib.pyplot as plt
-
 import time
+
 start_time = None
 
 SERIAL_PORT = 'COM6'  #may have to change for the pi
@@ -26,24 +23,18 @@ data_ptr = 0
 last_5_mic_values = [0,0,0,0,0]
 
 crazy_frog1,sr = lb.load("C:/Users/bruno/PyCharmMiscProject/Crazy Frog - Axel F.mp3",sr=SAMPLE_RATE,duration=0.5,offset=30)
-
 #need to change file path for the pi
+
 f, s, crazy_stft = sg.stft(crazy_frog1, fs=SAMPLE_RATE, nperseg=512, noverlap=256)
 crazy_stft1 = np.abs(crazy_stft)[40:220, :]
 
 #median_stft_ref = np.median(np.abs(crazy_stft1), axis=1)
 max_stft_ref = np.max(crazy_stft1, axis=1)
 
-median_stft_ref = gaussian_filter1d(max_stft_ref, sigma=1.5)
-stft_ref_minmean = median_stft_ref - np.mean(median_stft_ref)
-stft_ref_squ = np.maximum(stft_ref_minmean,0)
-ref_norm = np.linalg.norm(stft_ref_squ)
-
-# fig, ax = plt.subplots()
-# img = lb.display.specshow(lb.amplitude_to_db(crazy_stft,ref=np.max),y_axis='log', x_axis='time', ax=ax)
-# ax.set_title('Reference Spectrogram')
-# fig.colorbar(img, ax=ax, format="%+2.0f dB")
-# plt.show()
+stft_ref_gauss = gaussian_filter1d(max_stft_ref, sigma=1.5)
+stft_ref_minmean = stft_ref_gauss - np.mean(stft_ref_gauss)
+stft_ref_max = np.maximum(stft_ref_minmean, 0)
+ref_norm = np.linalg.norm(stft_ref_max)
 
 # --- Serial Port Setup ---
 try:
@@ -68,20 +59,21 @@ def make_spectra(buffers, stft_ref_squ, ref_norm):
     #stft on samples
     f, s, Zxx = sg.stft(dc_fixed, fs=SAMPLE_RATE, nperseg=512, noverlap=256)
 
-    # Get median across the time frames (axis 2)
-    #live_medians = np.median(np.abs(Zxx), axis=2)
+    # Get max value across timeframes for each buffers stft (axis 2)
     live_maxes = np.max(np.abs(Zxx), axis=2)
-    # Slice to match your 40:400 reference
+    # Slice to match reference target bins
     live_clipped = live_maxes[:, 40:220]
+    #gaussin blur
     live_clipped = gaussian_filter1d(live_clipped, sigma=1.5)
 
-    #mean square to ignore people noise
+    #set all data below the mean to 0 to ignore background freqs
     live_min_mean = live_clipped - np.mean(live_clipped, axis=1, keepdims=True)
     live_sq = np.maximum(live_min_mean,0)
 
     # Dot product for all 3 mics
     scores = np.dot(live_sq, stft_ref_squ) / (np.linalg.norm(live_sq, axis=1) * ref_norm + 1e-9)
 
+    #rms weighting
     weighted_scores = scores * (rms / (rms + 50))
 
     return weighted_scores.tolist()
@@ -128,12 +120,14 @@ while True:
                     duration = time.perf_counter() - start_time
                     print(f"SR: {BUFFER_SIZE / duration:.0f}Hz", end=" | ")
 
-                    scores = make_spectra(mic_data, stft_ref_squ, ref_norm)
+                    scores = make_spectra(mic_data, stft_ref_max, ref_norm)
                     #scores are generally quite low basically always below 0.5 due to rms weighting
                     bestmic = np.argmax(scores)
                     confidence = scores[bestmic] - np.mean([s for i, s in enumerate(scores) if i != bestmic])
                     print(f"Scores: {[round(s, 2) for s in scores]}, Best: {bestmic+1}, Confidence: {confidence:.2f}")
                     #if confidence is > 0.15 when no other sounds, probably the song
+                    #false positives are somewhat likely if it is noisy, weight mic values low
+                    #probably need to run like 5 times and look across them
 
 
                     data_ptr = 0
