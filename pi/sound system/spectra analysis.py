@@ -22,7 +22,7 @@ data_ptr = 0
 
 last_5_mic_values = [0,0,0,0,0]
 
-crazy_frog1,sr = lb.load("C:/Users/bruno/PyCharmMiscProject/Crazy Frog - Axel F.mp3",sr=SAMPLE_RATE,duration=0.5,offset=30)
+crazy_frog1,sr = lb.load("C:/Users/bruno/PyCharmMiscProject/Crazy Frog - Axel F.mp3",sr=SAMPLE_RATE,duration=0.125,offset=29.2)
 #need to change file path for the pi
 
 f, s, crazy_stft = sg.stft(crazy_frog1, fs=SAMPLE_RATE, nperseg=512, noverlap=256)
@@ -64,7 +64,7 @@ def make_spectra(buffers, stft_ref_squ, ref_norm):
     # Slice to match reference target bins
     live_clipped = live_maxes[:, 40:220]
     #gaussin blur
-    live_clipped = gaussian_filter1d(live_clipped, sigma=1.5)
+    live_clipped = gaussian_filter1d(live_clipped, sigma=1.5, axis=1)
 
     #set all data below the mean to 0 to ignore background freqs
     live_min_mean = live_clipped - np.mean(live_clipped, axis=1, keepdims=True)
@@ -74,7 +74,7 @@ def make_spectra(buffers, stft_ref_squ, ref_norm):
     scores = np.dot(live_sq, stft_ref_squ) / (np.linalg.norm(live_sq, axis=1) * ref_norm + 1e-9)
 
     #rms weighting
-    weighted_scores = scores * (rms / (rms + 50))
+    weighted_scores = scores * (rms / (rms + 15))
 
     return weighted_scores.tolist()
 
@@ -124,7 +124,10 @@ while True:
                     #scores are generally quite low basically always below 0.5 due to rms weighting
                     bestmic = np.argmax(scores)
                     confidence = scores[bestmic] - np.mean([s for i, s in enumerate(scores) if i != bestmic])
-                    print(f"Scores: {[round(s, 2) for s in scores]}, Best: {bestmic+1}, Confidence: {confidence:.2f}")
+                    if scores == [0,0,0]:
+                        print(f"Scores: {[round(s, 2) for s in scores]}, Best: n/a, Confidence: {confidence:.2f}")
+                    else:
+                        print(f"Scores: {[round(s, 2) for s in scores]}, Best: {bestmic+1}, Confidence: {confidence:.2f}")
                     #if confidence is > 0.15 when no other sounds, probably the song
                     #false positives are somewhat likely if it is noisy, weight mic values low
                     #probably need to run like 5 times and look across them
