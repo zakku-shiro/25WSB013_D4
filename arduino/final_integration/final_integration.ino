@@ -1,28 +1,25 @@
-/* 
-    Movement Definitions
-*/
-#define PIN_MOTOR_1_SPEED 0x06  // ANALOGUE,  0-255,    Left Motor Speed Control
-#define PIN_MOTOR_1_DIRECTION \
-  0x08  // DIGITAL,   LOW/HIGH, Left Motor Direction Control
-#define PIN_MOTOR_2_SPEED \
-  0x05  // ANALOGUE,  0-255,    Right Motor Speed Control
-#define PIN_MOTOR_2_DIRECTION \
-  0x07  // DIGITAL, LOW/HIGH, Right Motor Direction Control
+// Movement Definitions
+#define PIN_MOTOR_1_SPEED 0x06
+#define PIN_MOTOR_1_DIRECTION 0x08
+#define PIN_MOTOR_2_SPEED 0x05
+#define PIN_MOTOR_2_DIRECTION 0x07
+// US Sensor Defs
+#define US_TRIG_PIN 0x09
+#define US_ECHO_PIN 0x0A
+#define US_SEND_RATE_MS 250
+
 #define MOTOR_FORWARD LOW
 #define MOTOR_REVERSE HIGH
-#define MOTOR_OFF_SPEED 0
-#define MOTOR_MIN_SPEED 1
-#define MOTOR_HALF_SPEED 127
+
 #define MOTOR_MAX_SPEED 255
 
-/*
-    Communications Definitions
-*/
+// Comms Definitions
 #define BAUD_RATE 500000
 #define SYNC1 0xBE
 #define SYNC2 0xEF
 #define PACKET_BUFFER_SIZE 32
-#define MOVE_PACKET_LENGTH 2
+
+#define MOVE_PACKET_LENGTH 4
 #define LED_PACKET_LENGTH 1
 
 enum {
@@ -31,52 +28,63 @@ enum {
   SIG_ACKNOWLEDGE,
   SIG_SOUND_DATA,
   SIG_LED_COMMAND,
-  SIG_MOVE_COMMAND
+  SIG_MOVE_COMMAND,
+  SIG_ULTRASONIC_DATA,
 };
 
-// LED Control Variables
-bool  g_isLEDOn = false,
-      g_isBlinking = false;
+// Watchdog Configs
+unsigned long g_lastCommandTime = 0;
+#define COMMAND_TIMEOUT_MS 500
+
+// US Controls
+unsigned long g_lastUltrasonicPacketTime = 0;
+
+// LED Controls
+bool g_isLEDOn = false,
+     g_isBlinking = false;
 unsigned long g_TargetTime = 0;
 
-void setLeftMotorSpeed(uint8_t motor_speed) {
-  analogWrite(PIN_MOTOR_1_SPEED, motor_speed);
+void setLeftMotorSpeed(uint8_t speed) {
+  analogWrite(PIN_MOTOR_1_SPEED, speed);
 }
 
-void setRightMotorSpeed(uint8_t motor_speed) {
-  analogWrite(PIN_MOTOR_2_SPEED, motor_speed);
+void setLeftMotorDirection(uint8_t direction) {
+  digitalWrite(PIN_MOTOR_1_DIRECTION, direction);
 }
 
-void setMotorSpeed(uint8_t motor_speed) {
-  setLeftMotorSpeed(motor_speed);
-  setRightMotorSpeed(motor_speed);
+void setRightMotorSpeed(uint8_t speed) {
+  analogWrite(PIN_MOTOR_2_SPEED, speed);
 }
 
-void moveForward() {
-  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_FORWARD);
-  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_FORWARD);
+void setRightMotorDirection(uint8_t direction) {
+  digitalWrite(PIN_MOTOR_2_DIRECTION, direction);
 }
 
+float getDistanceCm() {
+  digitalWrite(US_TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(US_TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(US_TRIG_PIN, LOW);
 
-void moveReverse() {
-  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_REVERSE);
-  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_REVERSE);
+  long duration = pulseIn(US_ECHO_PIN, HIGH, 15000);
+
+  if (duration == 0) {
+    return 0;
+  }
+  
+  // Formula for distance
+  float distance = duration * 0.0343 / 2.0;
+  return distance;
 }
 
-void turnLeft() {
-  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_REVERSE);
-  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_FORWARD);
-}
-
-void turnRight() {
-  digitalWrite(PIN_MOTOR_1_DIRECTION, MOTOR_FORWARD);
-  digitalWrite(PIN_MOTOR_2_DIRECTION, MOTOR_REVERSE);
-}
-
-// Packet Format: | SYNC1 | SYNC2 | TYPE | LEN | PAYLOAD | CRC |
+/*
+  Packet Format:
+  | SYNC1 | SYNC2 | TYPE | LEN | PAYLOAD | CRC |
+*/
 void parseSerial() {
   static uint8_t decodeState = 0;
-  static uint8_t msg_type;
+  static uint8_t msgType;
   static uint8_t length;
   static uint8_t buffer[PACKET_BUFFER_SIZE];
   static uint8_t index;
@@ -94,7 +102,7 @@ void parseSerial() {
   while (Serial.available()) {
     uint8_t incomingByte = Serial.read();
 
-    switch(decodeState) {
+    switch (decodeState) {
       case WAIT_SYNC1:
         if (incomingByte == SYNC1) decodeState = WAIT_SYNC2;
         break;
@@ -105,37 +113,35 @@ void parseSerial() {
         break;
 
       case WAIT_TYPE:
-        msg_type = incomingByte;
+        msgType = incomingByte;
         crc = incomingByte;
         decodeState = WAIT_LEN;
         break;
 
       case WAIT_LEN:
-        length = incomingByte;
-
-        if (length > PACKET_BUFFER_SIZE) {
-          decodeState = WAIT_SYNC1;
+          length = incomingByte;
+          if (length > PACKET_BUFFER_SIZE) { 
+            decodeState = WAIT_SYNC1; 
+            break;
+          }
+          crc ^= incomingByte;
+          index = 0;
+          decodeState = (length == 0) ? WAIT_CRC : WAIT_PAYLOAD;
           break;
-        }
-
-        crc ^= incomingByte;
-        index = 0;
-        decodeState = WAIT_PAYLOAD;
-        break;
 
       case WAIT_PAYLOAD:
         buffer[index++] = incomingByte;
         crc ^= incomingByte;
 
         if (index >= length)
-          decodeState = 5;
+          decodeState = WAIT_CRC;
         break;
 
       case WAIT_CRC:
         if (crc == incomingByte)
-          handlePacket(msg_type, buffer, length);
+          handlePacket(msgType, buffer, length);
 
-        decodeState = 0;
+        decodeState = WAIT_SYNC1;
         break;
     }
   }
@@ -146,7 +152,9 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
 
   switch (msg_type) {
     case SIG_PING:
-      break;
+        sendPacket(SIG_ACKNOWLEDGE, 0, 0);
+        return;
+
     case SIG_LED_COMMAND: {
       if (length != LED_PACKET_LENGTH) {
         invalidPacketLength = true;
@@ -154,11 +162,11 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
       }
 
       g_isBlinking = *data;
-      if (!g_isBlinking) { // Ensure LED turns off
+
+      if (!g_isBlinking) {
         digitalWrite(LED_BUILTIN, LOW);
         g_isLEDOn = false;
       }
-
       break;
     }
 
@@ -167,43 +175,22 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
         invalidPacketLength = true;
         break;
       }
-      
-      enum move_type {
-        STOP = 0,
-        REVERSE,
-        FORWARD,
-        LEFT_TURN,
-        RIGHT_TURN
-      };
-      move_type command = *data;
 
-      uint8_t newSpeed = *(data + 1);
-      if (newSpeed != 0) {
-        setMotorSpeed(newSpeed);
-      }
+      setLeftMotorDirection(data[0] ? MOTOR_REVERSE : MOTOR_FORWARD);
+      setRightMotorDirection(data[2] ? MOTOR_REVERSE : MOTOR_FORWARD);
+      setLeftMotorSpeed((uint8_t)data[1]);
+      setRightMotorSpeed((uint8_t)data[3]);
 
-      switch (command) {
-        case STOP:
-          setMotorSpeed(0);
-          break;
-        case REVERSE:
-          moveReverse();
-          break;
-        case FORWARD:
-          moveForward();
-          break;
-        case LEFT_TURN:
-          turnLeft();
-          break;
-        case RIGHT_TURN:
-          turnRight();
-          break;
-        default:
-          uint8_t err = 2;
-          sendPacket(SIG_ERROR, &err, 1);
-          return;
-      }
+      // Update watchdog timer
+      g_lastCommandTime = millis();
+
       break;
+    }
+
+    default: {
+      uint8_t err = 2;
+      sendPacket(SIG_ERROR, &err, 1);
+      return;
     }
   }
 
@@ -215,19 +202,21 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
   }
 }
 
-void sendPacket(uint8_t msg_type, uint8_t *payload, uint8_t length) {
+/*
+    Packet Sender
+*/
+void sendPacket(uint8_t msgType, uint8_t *payload, uint8_t length) {
   if (Serial.availableForWrite() < (length + 5))
     return;
 
-  uint8_t crc = msg_type ^ length;
+  uint8_t crc = msgType ^ length;
 
   Serial.write(SYNC1);
   Serial.write(SYNC2);
-  Serial.write(msg_type);
+  Serial.write(msgType);
   Serial.write(length);
 
-  for (uint8_t i = 0; i < length; i++)
-  {
+  for (uint8_t i = 0; i < length; i++) {
     Serial.write(payload[i]);
     crc ^= payload[i];
   }
@@ -236,16 +225,18 @@ void sendPacket(uint8_t msg_type, uint8_t *payload, uint8_t length) {
 }
 
 void setup() {
-  // Initialize GPIO
-  for (uint8_t i = 5; i <= 8; i++) {
-    pinMode(i, OUTPUT);
-  }
+  pinMode(PIN_MOTOR_1_SPEED, OUTPUT);
+  pinMode(PIN_MOTOR_1_DIRECTION, OUTPUT);
+  pinMode(PIN_MOTOR_2_SPEED, OUTPUT);
+  pinMode(PIN_MOTOR_2_DIRECTION, OUTPUT);
+  pinMode(US_TRIG_PIN, OUTPUT);
+  pinMode(US_ECHO_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
-  
-  setMotorSpeed(0);
+
+  setLeftMotorSpeed(0);
+  setRightMotorSpeed(0);
 
   Serial.begin(BAUD_RATE);
-  // Wait for serial port to connect. Needed for native USB
   uint8_t counter = 0;
   while (!Serial) {
     digitalWrite(LED_BUILTIN, counter++ % 2);
@@ -253,21 +244,33 @@ void setup() {
 }
 
 void loop() {
-  // Communications Check
   parseSerial();
-  
-  // LED Handler
+
+  if (millis() - g_lastUltrasonicPacketTime > US_SEND_RATE_MS) {
+    float distance = getDistanceCm();
+    sendPacket(SIG_ULTRASONIC_DATA, (uint8_t*)&distance, sizeof(float));
+    g_lastUltrasonicPacketTime = millis();
+  }
+
+  // Watchdog safety stop
+  if (millis() - g_lastCommandTime > COMMAND_TIMEOUT_MS) {
+    setLeftMotorSpeed(0);
+    setRightMotorSpeed(0);
+    setLeftMotorDirection(MOTOR_FORWARD);
+    setRightMotorDirection(MOTOR_FORWARD);
+  }
+
+  // LED Blink Handler
   if (g_isBlinking) {
     if (millis() >= g_TargetTime) {
       if (g_isLEDOn) {
         digitalWrite(LED_BUILTIN, LOW);
         g_isLEDOn = false;
-        g_TargetTime = millis() + 100; // turn on in 1 tenth of a second (100 milliseconds)
       } else {
         digitalWrite(LED_BUILTIN, HIGH);
         g_isLEDOn = true;
-        g_TargetTime = millis() + 100; // turn off in 1 tenth of a second (100 milliseconds)
       }
+      g_TargetTime = millis() + 100;
     }
   }
 }
