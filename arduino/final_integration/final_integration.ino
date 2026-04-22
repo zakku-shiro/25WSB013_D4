@@ -43,7 +43,7 @@ static bool g_HasBeenAcknowledged = false;
 
 // Watchdog Configs
 unsigned long g_lastCommandTime = 0;
-#define COMMAND_TIMEOUT_MS 500
+#define COMMAND_TIMEOUT_MS 1000
 
 // US Controls
 unsigned long g_lastUltrasonicPacketTime = 0;
@@ -169,6 +169,8 @@ void parseSerial() {
 
 void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
   bool invalidPacketLength = false;
+  // Update watchdog timer
+  g_lastCommandTime = millis();
 
   switch (msg_type) {
     case SIG_PING:
@@ -212,9 +214,6 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
       setRightMotorDirection(data[2] ? MOTOR_REVERSE : MOTOR_FORWARD);
       setLeftMotorSpeed((uint8_t)data[1]);
       setRightMotorSpeed((uint8_t)data[3]);
-
-      // Update watchdog timer
-      g_lastCommandTime = millis();
 
       break;
     }
@@ -323,7 +322,7 @@ void loop() {
   parseSerial();
 
   // Watchdog safety stop
-  if (millis() - g_lastCommandTime > COMMAND_TIMEOUT_MS) {
+  if (millis() - g_lastCommandTime > COMMAND_TIMEOUT_MS && g_lastCommandTime != 0) {
     setLeftMotorSpeed(0);
     setRightMotorSpeed(0);
     setLeftMotorDirection(MOTOR_FORWARD);

@@ -75,6 +75,7 @@ def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_
     init_event.wait()
     sound_mode = mode_settings["demo_enabled"] and mode_settings["demo_type"]
 
+
     while True:
         now = time.time()
         dt = now - last_update
@@ -105,7 +106,7 @@ def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_
             us_hits = 0
 
         # =====================================================================
-        # Sound mode — navigate solely by microphone direction + ultrasonic
+        # Sound mode - navigate solely by microphone direction + ultrasonic
         # =====================================================================
         if sound_mode:
             # Drain vision queue to prevent back-pressure
@@ -169,7 +170,7 @@ def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_
                     left, right = BASE_SPEED, BASE_SPEED
 
         # =====================================================================
-        # Vision mode — navigate by camera detection + ultrasonic
+        # Vision mode - navigate by camera detection + ultrasonic
         # (active when demo_enabled=False, or demo_enabled=True and demo_type=False)
         # =====================================================================
         else:

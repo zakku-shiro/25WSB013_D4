@@ -16,6 +16,8 @@ BAUD_RATE = 500000
 SYNC = b'\xBE\xEF'
 MAX_PACKET_SIZE = 32
 
+SEND_INTERVAL = 0.02
+
 
 def send_packet(ser, msg_type, payload=b''):
     length = len(payload)
@@ -116,19 +118,21 @@ def serial_process(init_event, mode_settings, ultrasonic_q, motor_q, sound_in_q)
     # Let other threads know we are ready
     init_event.set()
 
+    last_send = time.time()
     while True:
+        now = time.time()
+
+        # Update command without blocking
         try:
-            cmd = motor_q.get(timeout=0.1)
-            # print(f"[SERIAL] Sent L:{cmd['left']} R:{cmd['right']}")
+            while True:
+                cmd = motor_q.get_nowait()
         except queue.Empty:
             pass
 
-        payload = encode_motor_command(
-            cmd["left"],
-            cmd["right"]
-        )
-
-        send_packet(ser, Signals.MOVE_COMMAND, payload)
+        if now - last_send >= SEND_INTERVAL:
+            payload = encode_motor_command(cmd["left"], cmd["right"])
+            send_packet(ser, Signals.MOVE_COMMAND, payload)
+            last_send = now
 
         while ser.in_waiting:
             msg_type, payload = read_packet(ser)
