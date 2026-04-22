@@ -37,6 +37,7 @@ enum {
   SIG_LED_COMMAND,
   SIG_MOVE_COMMAND,
   SIG_ULTRASONIC_DATA,
+  SIG_SWITCH_DATA
 };
 static bool g_HasBeenAcknowledged;
 
@@ -220,8 +221,8 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
     }
 
     default: {
-      uint8_t err = 2;
-      sendPacket(SIG_ERROR, &err, 1);
+      uint8_t err[3] = {5, msg_type, length};
+      sendPacket(SIG_ERROR, (uint8_t*)&err, 3);
       return;
     }
   }
@@ -303,8 +304,8 @@ void setup() {
     digitalWrite(LED_BUILTIN, counter++ % 2);
   }
 
-  
-}
+  // Read Switch States
+  sendPacket()
 
 void loop() {
   parseSerial();
