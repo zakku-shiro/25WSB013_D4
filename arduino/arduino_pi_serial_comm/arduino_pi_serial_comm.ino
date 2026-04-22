@@ -165,38 +165,6 @@ void sendPacket(uint8_t msg_type, uint8_t *payload, uint8_t length) {
   Serial.write(crc);
 }
 
-void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
-
-  Serial.begin(BAUD_RATE);
-
-  // Wait for serial port to connect. Needed for native USB
-  uint8_t counter = 0;
-  while (!Serial) {
-    digitalWrite(LED_BUILTIN, counter++ % 2);
-  }
-}
-
-void loop() {
-  // Communications Check
-  parseSerial();
-  
-  // LED Handler
-  if (g_isBlinking) {
-    if (millis() >= g_TargetTime) {
-      if (g_isLEDOn) {
-        digitalWrite(LED_BUILTIN, LOW);
-        g_isLEDOn = false;
-        g_TargetTime = millis() + 100; // turn on in 1 tenth of a second (100 milliseconds)
-      } else {
-        digitalWrite(LED_BUILTIN, HIGH);
-        g_isLEDOn = true;
-        g_TargetTime = millis() + 100; // turn off in 1 tenth of a second (100 milliseconds)
-      }
-    }
-  }
-}
-
 #define NUM_INPUTS 3// number of analog inputs
 volatile uint16_t anaValue[NUM_INPUTS];// to store results (10-bit ADC fits in uint16_t)
 volatile bool isFrameReady = false;
@@ -218,8 +186,15 @@ ISR(ADC_vect) {
 }
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
 
- Serial.begin(500000);
+  Serial.begin(BAUD_RATE);
+
+  // Wait for serial port to connect. Needed for native USB
+  uint8_t counter = 0;
+  while (!Serial) {
+    digitalWrite(LED_BUILTIN, counter++ % 2);
+  }
 
   // ADMUX: Set the reference voltage (AVCC) and select the first input A0 (0)
   ADMUX = 0x40; //| 0;
@@ -229,10 +204,12 @@ void setup() {
   ADCSRA |= (1 << ADSC);// start the first ADC conversion (ADSC)
 }
 
-uint8_t payload[32];
-void loop() {
-  uint8_t packed_data[4];
 
+void loop() {
+  // Communications Check
+  parseSerial();
+
+  uint8_t packed_data[4];
   if (isFrameReady) {
     isFrameReady = false;
     //removes end 2 of mic 1
@@ -244,6 +221,22 @@ void loop() {
     //rest of m3
     packed_data[3] = (anaValue[2] & 0x3F);
 
-    sendPacket(SIG_SOUND_DATA, &packed_data, 4);
+    sendPacket(SIG_SOUND_DATA, (uint8_t*)&packed_data, 4);
+  }
+  
+  // LED Handler
+  if (g_isBlinking) {
+    if (millis() >= g_TargetTime) {
+      if (g_isLEDOn) {
+        digitalWrite(LED_BUILTIN, LOW);
+        g_isLEDOn = false;
+        g_TargetTime = millis() + 100; // turn on in 1 tenth of a second (100 milliseconds)
+      } else {
+        digitalWrite(LED_BUILTIN, HIGH);
+        g_isLEDOn = true;
+        g_TargetTime = millis() + 100; // turn off in 1 tenth of a second (100 milliseconds)
+      }
+    }
   }
 }
+

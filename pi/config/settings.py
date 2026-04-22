@@ -48,3 +48,9 @@ STABILITY_THRESHOLD = 3.0   # cm - max variance in queue to be considered stable
 # --- Verify State ---
 VERIFY_TIMEOUT = 0.5        # seconds - if vision doesn't confirm, treat as obstacle
 VERIFY_MIN_HITS = 3         # vision area confirmations needed to enter ULTRASONIC
+
+# --- Sound System ---
+NUM_MICS = 3
+SAMPLE_RATE = 4000  # estimated sample rate
+MIC_BUFFER_SIZE = 1024
+MIC_CONFIDENCE_THRESHOLD = 0.25

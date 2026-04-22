@@ -20,7 +20,14 @@
 #define PACKET_BUFFER_SIZE 32
 
 #define MOVE_PACKET_LENGTH 4
-#define LED_PACKET_LENGTH 1
+#define LED_PACKET_LENGTH 2
+
+// Control Pins
+#define DEMO_ENABLED_LED 0x00
+#define MODE_SELECT_LED  0x01
+#define STATUS_LED 0x02
+#define DEMO_ENABLED_SWITCH 0x03
+#define MODE_SELECT_SWITCH 0x04
 
 enum {
   SIG_PING = 0,
@@ -31,6 +38,7 @@ enum {
   SIG_MOVE_COMMAND,
   SIG_ULTRASONIC_DATA,
 };
+static bool g_HasBeenAcknowledged;
 
 // Watchdog Configs
 unsigned long g_lastCommandTime = 0;
@@ -40,9 +48,20 @@ unsigned long g_lastCommandTime = 0;
 unsigned long g_lastUltrasonicPacketTime = 0;
 
 // LED Controls
-bool g_isLEDOn = false,
-     g_isBlinking = false;
-unsigned long g_TargetTime = 0;
+enum {
+  OFF = 0,
+  ON,
+  SLOW_BLINK,
+  FAST_BLINK
+};  // LED Modes
+#define BLINKING_TIME 200
+
+bool g_isOnboardLEDOn = false,
+     g_isOnboardLEDBlinking = false,
+     g_isStatusLEDOn = false;
+unsigned long g_OnboardLEDTargetTime = 0,
+              g_StatusLEDTargetTime = 0;
+uint8_t g_CurrentStatusLEDMode = OFF;
 
 void setLeftMotorSpeed(uint8_t speed) {
   analogWrite(PIN_MOTOR_1_SPEED, speed);
@@ -152,8 +171,12 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
 
   switch (msg_type) {
     case SIG_PING:
-        sendPacket(SIG_ACKNOWLEDGE, 0, 0);
-        return;
+      sendPacket(SIG_ACKNOWLEDGE, 0, 0);
+      return;
+
+    case SIG_ACKNOWLEDGE:
+      g_HasBeenAcknowledged = true;
+      return;
 
     case SIG_LED_COMMAND: {
       if (length != LED_PACKET_LENGTH) {
@@ -161,12 +184,21 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
         break;
       }
 
-      g_isBlinking = *data;
+      uint8_t pinIndex = data[0];
+      uint8_t newStatus = data[1];
 
-      if (!g_isBlinking) {
-        digitalWrite(LED_BUILTIN, LOW);
-        g_isLEDOn = false;
+      switch (pinIndex) {
+        case DEMO_ENABLED_LED:
+          break;
+        case MODE_SELECT_LED:
+          break;
+        case STATUS_LED:
+          g_CurrentStatusLEDMode = newStatus;
+          break;
+        default:
+          break;
       }
+
       break;
     }
 
@@ -224,6 +256,26 @@ void sendPacket(uint8_t msgType, uint8_t *payload, uint8_t length) {
   Serial.write(crc);
 }
 
+#define MIC_COUNT 3 // number of analog inputs
+volatile uint16_t anaValue[MIC_COUNT];  // to store results (10-bit ADC fits in uint16_t)
+volatile bool isFrameReady = false;
+
+// ADC Interrupt Service Routine - fires when a conversion is complete
+ISR(ADC_vect) {
+  static uint8_t i = 0;
+
+  anaValue[i] = ADC;
+  i++;
+
+  if (i >= MIC_COUNT) {
+    i = 0;
+    isFrameReady = true;
+  }
+
+  ADMUX = 0x40 | i;
+  ADCSRA |= (1 << ADSC);
+}
+
 void setup() {
   pinMode(PIN_MOTOR_1_SPEED, OUTPUT);
   pinMode(PIN_MOTOR_1_DIRECTION, OUTPUT);
@@ -233,24 +285,29 @@ void setup() {
   pinMode(US_ECHO_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 
+  // Zero Movement
   setLeftMotorSpeed(0);
   setRightMotorSpeed(0);
+  
+  /* Sound Setup*/
+  // ADMUX: Set the reference voltage (AVCC) and select the first input A0 (0)
+  ADMUX = 0x40; //| 0;
+
+  ADCSRA |= (1 << ADIE);  //enable ADC Interrupt (ADIE)
+  ADCSRA |= (1 << ADEN);  // enable ADC (ADEN)
+  ADCSRA |= (1 << ADSC);  // start the first ADC conversion (ADSC)
 
   Serial.begin(BAUD_RATE);
   uint8_t counter = 0;
   while (!Serial) {
     digitalWrite(LED_BUILTIN, counter++ % 2);
   }
+
+  
 }
 
 void loop() {
   parseSerial();
-
-  if (millis() - g_lastUltrasonicPacketTime > US_SEND_RATE_MS) {
-    float distance = getDistanceCm();
-    sendPacket(SIG_ULTRASONIC_DATA, (uint8_t*)&distance, sizeof(float));
-    g_lastUltrasonicPacketTime = millis();
-  }
 
   // Watchdog safety stop
   if (millis() - g_lastCommandTime > COMMAND_TIMEOUT_MS) {
@@ -260,17 +317,70 @@ void loop() {
     setRightMotorDirection(MOTOR_FORWARD);
   }
 
-  // LED Blink Handler
-  if (g_isBlinking) {
-    if (millis() >= g_TargetTime) {
-      if (g_isLEDOn) {
+  // Ultrasonic Data Sending
+  if (millis() - g_lastUltrasonicPacketTime > US_SEND_RATE_MS) {
+    float distance = getDistanceCm();
+    sendPacket(SIG_ULTRASONIC_DATA, (uint8_t*)&distance, sizeof(float));
+    g_lastUltrasonicPacketTime = millis();
+  }
+
+  // Microphone Data Sending
+  uint8_t packed_mic_data[4];
+  if (isFrameReady) {
+    isFrameReady = false;
+    //removes end 2 of mic 1
+    packed_mic_data[0] = (anaValue[0] >> 2) & 0xFF;
+    //last 2 values of m1 shifted left 6, removes end half of m2
+    packed_mic_data[1] = ((anaValue[0] & 0x03) << 6) | ((anaValue[1] >> 4) & 0x3F);
+    //moves end half of m2 4 bits left, only keeps first 2 bits of m3 as last 2 bits
+    packed_mic_data[2] = ((anaValue[1] & 0x0F) << 4) | ((anaValue[2] >> 6) & 0x0F);
+    //rest of m3
+    packed_mic_data[3] = (anaValue[2] & 0x3F);
+
+    sendPacket(SIG_SOUND_DATA, (uint8_t*)&packed_mic_data, 4);
+  }
+
+  // LED Blink Handler - Horrific
+  if (g_isOnboardLEDBlinking) {
+    if (millis() >= g_OnboardLEDTargetTime) {
+      if (g_isOnboardLEDOn) {
         digitalWrite(LED_BUILTIN, LOW);
-        g_isLEDOn = false;
+        g_isOnboardLEDOn = false;
       } else {
         digitalWrite(LED_BUILTIN, HIGH);
-        g_isLEDOn = true;
+        g_isOnboardLEDOn = true;
       }
-      g_TargetTime = millis() + 100;
+      g_OnboardLEDTargetTime = millis() + BLINKING_TIME;
     }
+  }
+
+  switch (g_CurrentStatusLEDMode) {
+    default:
+    case OFF:
+      if (g_isStatusLEDOn != false) {
+        digitalWrite(STATUS_LED, LOW);
+        g_isStatusLEDOn = false;
+      }
+      break;
+    case ON:
+      if (g_isStatusLEDOn != true) {
+        digitalWrite(STATUS_LED, HIGH);
+        g_isStatusLEDOn = true;
+      }
+      break;
+    case SLOW_BLINK:
+      if (millis() >= g_StatusLEDTargetTime) {
+        g_isStatusLEDOn = !g_isStatusLEDOn;
+        digitalWrite(STATUS_LED, g_isStatusLEDOn);
+        g_StatusLEDTargetTime = millis() + BLINKING_TIME;
+      }
+      break;
+    case FAST_BLINK:
+      if (millis() >= g_StatusLEDTargetTime) {
+        g_isStatusLEDOn = !g_isStatusLEDOn;
+        digitalWrite(STATUS_LED, g_isStatusLEDOn);
+        g_StatusLEDTargetTime = millis() + BLINKING_TIME / 2;
+      }
+      break;
   }
 }
