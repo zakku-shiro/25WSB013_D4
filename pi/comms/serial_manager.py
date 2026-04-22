@@ -16,6 +16,7 @@ BAUD_RATE = 500000
 SYNC = b'\xBE\xEF'
 MAX_PACKET_SIZE = 32
 
+
 def send_packet(ser, msg_type, payload=b''):
     length = len(payload)
     crc = msg_type ^ length
@@ -58,6 +59,7 @@ def read_packet(ser):
         if check == crc:
             return msg_type, payload
 
+
 def encode_motor_command(left_speed, right_speed):
     """
     Converts signed motor speeds into:
@@ -81,6 +83,7 @@ def encode_motor_command(left_speed, right_speed):
         abs(right_speed)
     ])
 
+
 def serial_process(ultrasonic_q, motor_q, sound_in_q):
     """
     Receives motor commands from controller:
@@ -98,48 +101,19 @@ def serial_process(ultrasonic_q, motor_q, sound_in_q):
     ser.setDTR(True)
     time.sleep(2)
 
-    led_stat = 1
-
     while True:
         try:
             cmd = motor_q.get(timeout=0.1)
-            payload = encode_motor_command(
-                cmd["left"],
-                cmd["right"]
-            )
-
-            send_packet(ser, Signals.MOVE_COMMAND, payload)
             # print(f"[SERIAL] Sent L:{cmd['left']} R:{cmd['right']}")
         except queue.Empty:
             pass
 
-        for i in range(3):
-            if i == 0:
-                payload = encode_motor_command(
-                    -180,
-                    180
-                )
-                send_packet(ser, Signals.MOVE_COMMAND, payload)
-                send_packet(ser, Signals.LED_COMMAND, bytes([2, 2]))
-            elif i == 1:
-                payload = encode_motor_command(
-                    180,
-                    180
-                )
-                send_packet(ser, Signals.MOVE_COMMAND, payload)
-                send_packet(ser, Signals.LED_COMMAND, bytes([2, 3]))
-            else:
-                payload = encode_motor_command(
-                    0,
-                    0
-                )
-                send_packet(ser, Signals.MOVE_COMMAND, payload)
-                send_packet(ser, Signals.LED_COMMAND, bytes([2, 1]))
-            time.sleep(5)
-        while True:
-            pass
+        payload = encode_motor_command(
+            cmd["left"],
+            cmd["right"]
+        )
 
-
+        send_packet(ser, Signals.MOVE_COMMAND, payload)
 
         while ser.in_waiting:
             msg_type, payload = read_packet(ser)
