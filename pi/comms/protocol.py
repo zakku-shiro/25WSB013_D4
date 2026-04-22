@@ -8,3 +8,4 @@ class Signals(enum.IntEnum):
     LED_COMMAND = 4
     MOVE_COMMAND = 5
     ULTRASONIC_DATA = 6
+    SWITCH_DATA = 7

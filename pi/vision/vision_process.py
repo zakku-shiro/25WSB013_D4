@@ -11,8 +11,11 @@ IS_RUNNING_ON_PI = bool(int(os.getenv("IS_RUNNING_ON_PI")))
 
 DEBUG_VIEW = True
 
-def vision_process(vision_q):
+def vision_process(init_event, mode_settings, vision_q):
     cam = Camera(IS_RUNNING_ON_PI)
+
+    # Wait for mode settings
+    init_event.wait()
 
     prev_time = time.time()
 
@@ -58,6 +61,13 @@ def vision_process(vision_q):
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
                     (255,255,0), 2)
+
+        cv2.putText(frame, f"Demo: Enabled? {'Yes' if mode_settings['demo_enabled'] else 'No'}, Mode? {'Sound' if mode_settings['demo_type'] else 'Vision'}",
+                    (10, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 255, 0), 2
+                    )
 
         if DEBUG_VIEW:
             cv2.imshow("Robot Vision", frame)

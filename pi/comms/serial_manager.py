@@ -84,7 +84,7 @@ def encode_motor_command(left_speed, right_speed):
     ])
 
 
-def serial_process(ultrasonic_q, motor_q, sound_in_q):
+def serial_process(init_event, mode_settings, ultrasonic_q, motor_q, sound_in_q):
     """
     Receives motor commands from controller:
     {
@@ -100,6 +100,21 @@ def serial_process(ultrasonic_q, motor_q, sound_in_q):
     ser.reset_input_buffer()
     ser.setDTR(True)
     time.sleep(2)
+
+    # Wait for Arduino to send us the status of the switches to choose a mode
+    while True:
+        if ser.in_waiting:
+            msg_type, payload = read_packet(ser)
+
+            if msg_type == Signals.SWITCH_DATA:
+                mode_settings["demo_enabled"], mode_settings["demo_type"] = bool(payload[0]), bool(payload[1])
+                send_packet(ser, Signals.ACKNOWLEDGE)
+                break
+
+    cmd = {"left": 0, "right": 0}
+
+    # Let other threads know we are ready
+    init_event.set()
 
     while True:
         try:

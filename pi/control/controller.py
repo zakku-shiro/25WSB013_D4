@@ -8,7 +8,7 @@ from utils.math_utils import lerp
 from gpio.gpio_rpi import ServoController
 
 
-def controller_process(ultrasonic_q, vision_q, motor_q, sound_q):
+def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_q, sound_q):
     state = RobotState.SEARCH_SPIN
     pid = PID(KP, KI, KD)
 
@@ -67,6 +67,10 @@ def controller_process(ultrasonic_q, vision_q, motor_q, sound_q):
         if new_state == RobotState.SEARCH_CAMERA:
             last_servo_update = time.time()
         state = new_state
+
+    # Wait for mode settings
+    init_event.wait()
+    demo_mode_enabled, demo_mode_type = mode_settings["demo_enabled"], mode_settings["demo_type"]
 
     while True:
         now = time.time()
