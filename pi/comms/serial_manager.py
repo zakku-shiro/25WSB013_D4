@@ -81,7 +81,7 @@ def encode_motor_command(left_speed, right_speed):
         abs(right_speed)
     ])
 
-def serial_process(ultrasonic_q, motor_q, sound_q):
+def serial_process(ultrasonic_q, motor_q, sound_in_q):
     """
     Receives motor commands from controller:
     {
@@ -98,22 +98,48 @@ def serial_process(ultrasonic_q, motor_q, sound_q):
     ser.setDTR(True)
     time.sleep(2)
 
-    send_interval = 0.02  # 50Hz update rate
+    led_stat = 1
 
     while True:
         try:
             cmd = motor_q.get(timeout=0.1)
+            payload = encode_motor_command(
+                cmd["left"],
+                cmd["right"]
+            )
+
+            send_packet(ser, Signals.MOVE_COMMAND, payload)
+            # print(f"[SERIAL] Sent L:{cmd['left']} R:{cmd['right']}")
         except queue.Empty:
-            continue
+            pass
 
-        payload = encode_motor_command(
-            cmd["left"],
-            cmd["right"]
-        )
+        for i in range(3):
+            if i == 0:
+                payload = encode_motor_command(
+                    -180,
+                    180
+                )
+                send_packet(ser, Signals.MOVE_COMMAND, payload)
+                send_packet(ser, Signals.LED_COMMAND, bytes([2, 2]))
+            elif i == 1:
+                payload = encode_motor_command(
+                    180,
+                    180
+                )
+                send_packet(ser, Signals.MOVE_COMMAND, payload)
+                send_packet(ser, Signals.LED_COMMAND, bytes([2, 3]))
+            else:
+                payload = encode_motor_command(
+                    0,
+                    0
+                )
+                send_packet(ser, Signals.MOVE_COMMAND, payload)
+                send_packet(ser, Signals.LED_COMMAND, bytes([2, 1]))
+            time.sleep(5)
+        while True:
+            pass
 
-        send_packet(ser, Signals.MOVE_COMMAND, payload)
-        last_send_time = time.time()
-        #print(f"[SERIAL] Sent L:{cmd['left']} R:{cmd['right']}")
+
 
         while ser.in_waiting:
             msg_type, payload = read_packet(ser)
@@ -124,13 +150,11 @@ def serial_process(ultrasonic_q, motor_q, sound_q):
                 case Signals.ERROR:
                     print(f"[Arduino ERROR]: {payload}")
                 case Signals.SOUND_DATA:
-                    # Todo: Add sound data to queue here
-                    pass
+                    # Unpacking
+                    m1 = (payload[0] << 2) | ((payload[1] & 0xF0) >> 6)
+                    m2 = ((payload[1] & 0x3F) << 4) | ((payload[2] & 0xF0) >> 4)
+                    m3 = ((payload[2] & 0x0F) << 6) | (payload[3] & 0x3F)
+                    sound_in_q.put((m1, m2, m3))
                 case Signals.ULTRASONIC_DATA:
                     data = struct.unpack("<f", payload)[0]
                     ultrasonic_q.put(data)
-
-        # Maintain consistent send rate
-        elapsed = time.time() - last_send_time
-        if elapsed < send_interval:
-            time.sleep(send_interval - elapsed)
