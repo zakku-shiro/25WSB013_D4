@@ -23,9 +23,9 @@
 #define LED_PACKET_LENGTH 2
 
 // Control Pins
-#define DEMO_ENABLED_LED 0x00
-#define MODE_SELECT_LED  0x01
-#define STATUS_LED 0x02
+#define LED_DEMO_ENABLED 0x0B
+#define LED_MODE_SELECT  0x0C
+#define LED_STATUS 0x02
 #define DEMO_ENABLED_SWITCH 0x03
 #define MODE_SELECT_SWITCH 0x04
 
@@ -39,7 +39,7 @@ enum {
   SIG_ULTRASONIC_DATA,
   SIG_SWITCH_DATA
 };
-static bool g_HasBeenAcknowledged;
+static bool g_HasBeenAcknowledged = false;
 
 // Watchdog Configs
 unsigned long g_lastCommandTime = 0;
@@ -189,17 +189,16 @@ void handlePacket(uint8_t msg_type, uint8_t *data, uint8_t length) {
       uint8_t newStatus = data[1];
 
       switch (pinIndex) {
-        case DEMO_ENABLED_LED:
+        case LED_DEMO_ENABLED:
+        case LED_MODE_SELECT:
+          digitalWrite(pinIndex, (newStatus == ON) ? HIGH : LOW);
           break;
-        case MODE_SELECT_LED:
-          break;
-        case STATUS_LED:
+        case LED_STATUS:
           g_CurrentStatusLEDMode = newStatus;
           break;
         default:
           break;
       }
-
       break;
     }
 
@@ -285,6 +284,11 @@ void setup() {
   pinMode(US_TRIG_PIN, OUTPUT);
   pinMode(US_ECHO_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_MODE_SELECT, OUTPUT);
+  pinMode(LED_DEMO_ENABLED, OUTPUT);
+  pinMode(LED_STATUS, OUTPUT);
+  pinMode(DEMO_ENABLED_SWITCH, INPUT_PULLUP);
+  pinMode(MODE_SELECT_SWITCH, INPUT_PULLUP);
 
   // Zero Movement
   setLeftMotorSpeed(0);
@@ -305,7 +309,15 @@ void setup() {
   }
 
   // Read Switch States
-  sendPacket()
+  uint8_t switchStates[2] = {digitalRead(DEMO_ENABLED_SWITCH), digitalRead(MODE_SELECT_SWITCH)};
+  sendPacket(SIG_SWITCH_DATA, (uint8_t*)&switchStates, 2);
+  digitalWrite(LED_DEMO_ENABLED, switchStates[0]);
+  digitalWrite(LED_MODE_SELECT, switchStates[1]);
+
+  while (!g_HasBeenAcknowledged) {
+    parseSerial();
+  }
+}
 
 void loop() {
   parseSerial();
@@ -359,27 +371,27 @@ void loop() {
     default:
     case OFF:
       if (g_isStatusLEDOn != false) {
-        digitalWrite(STATUS_LED, LOW);
+        digitalWrite(LED_STATUS, LOW);
         g_isStatusLEDOn = false;
       }
       break;
     case ON:
       if (g_isStatusLEDOn != true) {
-        digitalWrite(STATUS_LED, HIGH);
+        digitalWrite(LED_STATUS, HIGH);
         g_isStatusLEDOn = true;
       }
       break;
     case SLOW_BLINK:
       if (millis() >= g_StatusLEDTargetTime) {
         g_isStatusLEDOn = !g_isStatusLEDOn;
-        digitalWrite(STATUS_LED, g_isStatusLEDOn);
+        digitalWrite(LED_STATUS, g_isStatusLEDOn);
         g_StatusLEDTargetTime = millis() + BLINKING_TIME;
       }
       break;
     case FAST_BLINK:
       if (millis() >= g_StatusLEDTargetTime) {
         g_isStatusLEDOn = !g_isStatusLEDOn;
-        digitalWrite(STATUS_LED, g_isStatusLEDOn);
+        digitalWrite(LED_STATUS, g_isStatusLEDOn);
         g_StatusLEDTargetTime = millis() + BLINKING_TIME / 2;
       }
       break;

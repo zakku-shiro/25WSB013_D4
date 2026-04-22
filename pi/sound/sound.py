@@ -43,7 +43,7 @@ def make_spectra(buffers, stft_ref_squ, ref_norm):
 
     return weighted_scores.tolist()
 
-def sound_process(sound_in_q, sound_out_q):
+def sound_process(init_event, mode_settings, sound_in_q, sound_out_q):
     # Precalc
     mic_data = np.zeros((NUM_MICS, MIC_BUFFER_SIZE), dtype=np.uint16)
     mic_data_index = 0
@@ -58,6 +58,8 @@ def sound_process(sound_in_q, sound_out_q):
     stft_ref_max = np.maximum(stft_ref_minmean, 0)
     ref_norm = np.linalg.norm(stft_ref_max)
 
+    # Wait for mode settings
+    init_event.wait()
     start_time = time.perf_counter()
 
     # Main loop

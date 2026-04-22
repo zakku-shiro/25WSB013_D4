@@ -53,4 +53,4 @@ VERIFY_MIN_HITS = 3         # vision area confirmations needed to enter ULTRASON
 NUM_MICS = 3
 SAMPLE_RATE = 4000  # estimated sample rate
 MIC_BUFFER_SIZE = 1024
-MIC_CONFIDENCE_THRESHOLD = 0.25
+MIC_CONFIDENCE_THRESHOLD = 0.3
