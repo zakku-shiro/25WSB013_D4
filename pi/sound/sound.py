@@ -62,6 +62,15 @@ def sound_process(init_event, mode_settings, sound_in_q, sound_out_q):
     init_event.wait()
     start_time = time.perf_counter()
 
+    # If not in sound mode, drain the queue indefinitely and do nothing.
+    if not (mode_settings.get("demo_enabled") and mode_settings.get("demo_type")):
+        while True:
+            try:
+                sound_in_q.get(timeout=0.1)
+            except queue.Empty:
+                pass
+
+
     # Main loop
     while True:
         try:
@@ -86,6 +95,15 @@ def sound_process(init_event, mode_settings, sound_in_q, sound_out_q):
             confidence = scores[best_mic_index] - np.mean([s for i, s in enumerate(scores) if i != best_mic_index])
 
             output_state = SoundStates((best_mic_index + 1) if confidence > MIC_CONFIDENCE_THRESHOLD else 0)
+
+            # Drain stale states before pushing latest
+            try:
+                while True:
+                    sound_out_q.get_nowait()
+            except queue.Empty:
+                pass
             sound_out_q.put(output_state)
 
-            print(f"Output state: {output_state}, confidence: {confidence}")
+            print(f"[SOUND] {output_state.name} | "
+                  f"scores: {[f'{s:.3f}' for s in scores]} | "
+                  f"conf: {confidence:.3f}")
