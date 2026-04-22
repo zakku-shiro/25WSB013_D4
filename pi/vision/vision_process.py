@@ -1,27 +1,30 @@
 import cv2
 import time
+import queue
+import os
+import dotenv
 from vision.camera import Camera
 from vision.detector import detect_led
-import dotenv
-import os
-import queue
+from config.settings import DEBUG_VIEW
 
 dotenv.load_dotenv()
 IS_RUNNING_ON_PI = bool(int(os.getenv("IS_RUNNING_ON_PI")))
 
-DEBUG_VIEW = True
 
 def vision_process(init_event, mode_settings, vision_q):
     cam = Camera(IS_RUNNING_ON_PI)
 
-    # Wait for mode settings
     init_event.wait()
+
+    # In sound mode detection is ignored - skip it to reduce CPU load on the Pi
+    sound_mode = mode_settings.get('demo_enabled') and mode_settings.get('demo_type')
 
     prev_time = time.time()
 
     while True:
         frame = cam.capture_frame()
-        result = detect_led(frame)
+
+        result = None if sound_mode else detect_led(frame)
 
         now = time.time()
         fps = 1 / (now - prev_time)
@@ -32,42 +35,25 @@ def vision_process(init_event, mode_settings, vision_q):
             cy = int(result["y"])
 
             cv2.circle(frame, (cx, cy), 8, (0, 255, 0), 2)
+            cv2.putText(frame, f"X:{cx} Err:{int(result['error_x'])}",
+                        (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-            cv2.putText(frame,
-                        f"X:{cx} Err:{int(result['error_x'])}",
-                        (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        (0,255,0), 2)
-
-            # Send latest only
             try:
                 while True:
                     vision_q.get_nowait()
             except queue.Empty:
                 vision_q.put(result)
-
         else:
             cv2.putText(frame, "NO TARGET",
-                        (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        (0,0,255), 2)
+                        (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-        # FPS display
+        cv2.putText(frame, f"FPS: {int(fps)}",
+                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+
         cv2.putText(frame,
-                    f"FPS: {int(fps)}",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (255,255,0), 2)
-
-        cv2.putText(frame, f"Demo: Enabled? {'Yes' if mode_settings['demo_enabled'] else 'No'}, Mode? {'Sound' if mode_settings['demo_type'] else 'Vision'}",
-                    (10, 90),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (255, 255, 0), 2
-                    )
+                    f"Demo: Enabled? {'Yes' if mode_settings['demo_enabled'] else 'No'}, "
+                    f"Mode? {'Sound' if mode_settings['demo_type'] else 'Vision'}",
+                    (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
 
         if DEBUG_VIEW:
             cv2.imshow("Robot Vision", frame)

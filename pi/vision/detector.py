@@ -3,8 +3,6 @@ import numpy as np
 from config.settings import *
 from utils.math_utils import lerp
 
-DETECTOR_VIEW = False
-
 _smoothed_x = None
 _smoothed_y = None
 
@@ -92,7 +90,7 @@ def detect_led(frame):
     error_x = _smoothed_x - FRAME_WIDTH  / 2
     error_y = _smoothed_y - FRAME_HEIGHT / 2
 
-    if DETECTOR_VIEW:
+    if DEBUG_VIEW:
         cv2.circle(mask_clean, (int(_smoothed_x), int(_smoothed_y)), 8, 128, 2)
         cv2.imshow("Detector Vision", mask_clean)
 
