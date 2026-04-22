@@ -13,7 +13,7 @@ BAUD_RATE = 500000
 FRAME_SIZE = 6
 DATA_BYTES = 4
 NUM_MICS = 3
-SAMPLE_RATE = 8325  # estimated sample rate
+SAMPLE_RATE = 8330  # estimated sample rate
 
 BUFFER_SIZE = 1024
 
@@ -22,7 +22,7 @@ data_ptr = 0
 
 last_5_mic_values = [0,0,0,0,0]
 
-crazy_frog1,sr = lb.load("C:/Users/bruno/PyCharmMiscProject/Crazy Frog - Axel F.mp3",sr=SAMPLE_RATE,duration=0.125,offset=29.2)
+crazy_frog1,sr = lb.load("C:/Users/bruno/PyCharmMiscProject/Crazy Frog - Axel F.mp3",sr=SAMPLE_RATE,duration=0.125,offset=24)
 #need to change file path for the pi
 
 f, s, crazy_stft = sg.stft(crazy_frog1, fs=SAMPLE_RATE, nperseg=512, noverlap=256)
@@ -125,9 +125,11 @@ while True:
                     bestmic = np.argmax(scores)
                     confidence = scores[bestmic] - np.mean([s for i, s in enumerate(scores) if i != bestmic])
                     if scores == [0,0,0]:
-                        print(f"Scores: {[round(s, 2) for s in scores]}, Best: n/a, Confidence: {confidence:.2f}")
+                        print(f"Scores: {[round(s, 2) for s in scores]}, Best: n/a, No confidence: {confidence:.2f}")
+                    elif confidence > 0.1:
+                        print(f"Scores: {[round(s, 2) for s in scores]}, Best: {bestmic + 1}, Confidence: {confidence:.2f}")
                     else:
-                        print(f"Scores: {[round(s, 2) for s in scores]}, Best: {bestmic+1}, Confidence: {confidence:.2f}")
+                        print(f"Scores: {[round(s, 2) for s in scores]}, Best: {bestmic+1}, Low confidence: {confidence:.2f}")
                     #if confidence is > 0.15 when no other sounds, probably the song
                     #false positives are somewhat likely if it is noisy, weight mic values low
                     #probably need to run like 5 times and look across them
