@@ -34,6 +34,7 @@ void setup() {
 }
 }
 
+uint8_t payload[32];
 void loop() {
   //const uint8_t FRAME_SIZE = 8;
   const uint8_t FRAME_SIZE = 6;
