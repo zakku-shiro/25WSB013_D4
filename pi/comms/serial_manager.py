@@ -1,6 +1,5 @@
 import queue
 import struct
-
 import serial
 import time
 import os
@@ -11,17 +10,23 @@ from comms.protocol import Signals
 dotenv.load_dotenv()
 
 SERIAL_PORT = os.getenv("SERIAL_PORT", "COM6")
-BAUD_RATE = 500000
+BAUD_RATE   = 500000
 
-SYNC = b'\xBE\xEF'
+SYNC            = b'\xBE\xEF'
 MAX_PACKET_SIZE = 32
 
-SEND_INTERVAL = 0.02
+# Motor command is re-sent at least this often to prevent watchdog trips
+# when the controller is in a stopped state and producing commands slowly.
+KEEPALIVE_INTERVAL = 0.2  # seconds
+
+# Maximum inbound packets processed per iteration to prevent sound data
+# flooding from starving the motor command send.
+MAX_INCOMING_PER_ITER = 8
 
 
 def send_packet(ser, msg_type, payload=b''):
     length = len(payload)
-    crc = msg_type ^ length
+    crc    = msg_type ^ length
 
     for b in payload:
         crc ^= b
@@ -44,15 +49,15 @@ def read_packet(ser):
         if ser.read(1) != SYNC[1:2]:
             continue
 
-        header = read_exact(ser, 2)
+        header   = read_exact(ser, 2)
         msg_type = header[0]
-        length = header[1]
+        length   = header[1]
 
         if length > MAX_PACKET_SIZE:
             continue
 
         payload = read_exact(ser, length)
-        crc = read_exact(ser, 1)[0]
+        crc     = read_exact(ser, 1)[0]
 
         check = msg_type ^ length
         for b in payload:
@@ -70,12 +75,10 @@ def encode_motor_command(left_speed, right_speed):
     dir:   0 = forward, 1 = reverse
     speed: 0–255
     """
-
-    # Clamp values safely
-    left_speed = max(-255, min(255, left_speed))
+    left_speed  = max(-255, min(255, left_speed))
     right_speed = max(-255, min(255, right_speed))
 
-    left_dir = 0 if left_speed >= 0 else 1
+    left_dir  = 0 if left_speed  >= 0 else 1
     right_dir = 0 if right_speed >= 0 else 1
 
     return bytes([
@@ -87,14 +90,14 @@ def encode_motor_command(left_speed, right_speed):
 
 
 def serial_process(init_event, mode_settings, ultrasonic_q, motor_q, sound_in_q):
-    """
-    Receives motor commands from controller:
-    {
-        "left": int (-255 to 255),
-        "right": int (-255 to 255)
-    }
-    """
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
+    ser = None
+    while ser is None:
+        try:
+            ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
+        except serial.SerialException as e:
+            print(f"[SERIAL] Waiting for {SERIAL_PORT}: {e}")
+            time.sleep(1.0)
+
 
     # Reset Arduino cleanly
     ser.setDTR(False)
@@ -103,51 +106,64 @@ def serial_process(init_event, mode_settings, ultrasonic_q, motor_q, sound_in_q)
     ser.setDTR(True)
     time.sleep(2)
 
-    # Wait for Arduino to send us the status of the switches to choose a mode
+    # Block until the Arduino sends switch state so mode_settings is populated
+    # before init_event unblocks the other processes.
     while True:
         if ser.in_waiting:
             msg_type, payload = read_packet(ser)
 
             if msg_type == Signals.SWITCH_DATA:
-                mode_settings["demo_enabled"], mode_settings["demo_type"] = bool(payload[0]), bool(payload[1])
+                mode_settings["demo_enabled"] = bool(payload[0])
+                mode_settings["demo_type"]    = bool(payload[1])
                 send_packet(ser, Signals.ACKNOWLEDGE)
                 break
 
-    cmd = {"left": 0, "right": 0}
+    cmd            = {"left": 0, "right": 0}
+    last_send_time = 0
 
-    # Let other threads know we are ready
     init_event.set()
 
-    last_send = time.time()
     while True:
-        now = time.time()
-
-        # Update command without blocking
+        # Keepalive
         try:
-            while True:
-                cmd = motor_q.get_nowait()
+            cmd = motor_q.get(timeout=0.05)
         except queue.Empty:
             pass
 
-        if now - last_send >= SEND_INTERVAL:
+        now = time.perf_counter()
+        if now - last_send_time >= KEEPALIVE_INTERVAL:
+            # Clear buffer to ensure room
+            while ser.in_waiting:
+                _, _ = read_packet(ser)                
+            
             payload = encode_motor_command(cmd["left"], cmd["right"])
             send_packet(ser, Signals.MOVE_COMMAND, payload)
-            last_send = now
+            print(f"[SERIAL:{now}] -> L,R:{cmd['left']},{cmd['right']}")
+            last_send_time = now
 
-        while ser.in_waiting:
+        # Cap inbound processing
+        for _ in range(MAX_INCOMING_PER_ITER):
+            if not ser.in_waiting:
+                break
+
             msg_type, payload = read_packet(ser)
 
             match msg_type:
                 case Signals.ACKNOWLEDGE:
                     pass
+
                 case Signals.ERROR:
                     print(f"[Arduino ERROR]: {payload}")
+
                 case Signals.SOUND_DATA:
-                    # Unpacking
-                    m1 = (payload[0] << 2) | ((payload[1] & 0xF0) >> 6)
-                    m2 = ((payload[1] & 0x3F) << 4) | ((payload[2] & 0xF0) >> 4)
-                    m3 = ((payload[2] & 0x0F) << 6) | (payload[3] & 0x3F)
-                    sound_in_q.put((m1, m2, m3))
+                    # Single frame: 3×10-bit ADC values packed into 4 bytes
+                    if len(payload) >= 4:
+                        d  = payload
+                        m0 = ((d[0] << 2) | (d[1] >> 6))             & 0x3FF
+                        m1 = (((d[1] & 0x3F) << 4) | (d[2] >> 4))   & 0x3FF
+                        m2 = (((d[2] & 0x0F) << 6) | (d[3] & 0x3F)) & 0x3FF
+                        sound_in_q.put((m0, m1, m2))
+
                 case Signals.ULTRASONIC_DATA:
                     data = struct.unpack("<f", payload)[0]
                     ultrasonic_q.put(data)
