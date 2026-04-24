@@ -10,6 +10,7 @@ if __name__ == "__main__":
     motor_q = Queue()
     sound_in_q = Queue()
     sound_out_q = Queue()
+    #led_q = Queue()
     manager = Manager()
     mode_settings = manager.dict()
     init_event = Event()

@@ -70,6 +70,8 @@ def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_
             pid.reset()
         if new_state == RobotState.SEARCH_CAMERA:
             last_servo_update = time.time()
+        #if new_state == RobotState.ULTRASONIC:
+            
         state = new_state
 
     init_event.wait()
@@ -155,8 +157,8 @@ def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_
                 left, right = 0, 0
 
             elif state == RobotState.SEARCH_SPIN:
-                left  =  BASE_SPEED * 0.5 * last_direction
-                right = -BASE_SPEED * 0.5 * last_direction
+                left  =  BASE_SPEED * 0.8 * last_direction
+                right = -BASE_SPEED * 0.8 * last_direction
 
             elif state == RobotState.TRACK:
                 mic = last_sound_state.value
@@ -306,11 +308,11 @@ def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_
                 left, right = 0, 0
 
         # Drain stale commands before pushing the latest to avoid queue back-pressure
-        try:
-            while True:
-                motor_q.get_nowait()
-        except queue.Empty:
-            pass
+        #try:
+        #    while True:
+        #        motor_q.get_nowait()
+        #except queue.Empty:
+        #    pass
 
         motor_q.put({
             "left": int(left),
@@ -334,3 +336,6 @@ def controller_process(init_event, mode_settings, ultrasonic_q, vision_q, motor_
                     f"area:{int(area)}"
                 )
             last_print = now
+            
+        # Yield core
+        time.sleep(0.005)
